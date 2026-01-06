@@ -1,54 +1,8 @@
-# Logs
-logs
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
-
-node_modules
-dist
-dist-ssr
-*.local
-
-# Editor directories and files
-.vscode/*
-!.vscode/extensions.json
-.idea
-.DS_Store
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
-
-# Terraform
-**/.terraform/
+﻿**/.terraform/*
 **/.terraform.lock.hcl
-**/terraform.tfstate
-**/terraform.tfstate.*
-**/terraform.tfvars
-**/terraform.tfvars.json
-crash.log
-crash.*.log
-
-# Node
-node_modules/
-dist/
-
-# Env
-.env.local
-.env.*
-
-# Terraform
-infra/.terraform/
-infra/terraform.tfstate
-infra/terraform.tfstate.backup
-infra/*.tfvars
-infra/*.tfvars.json
-
-# Env
+**/*.tfstate
+**/*.tfstate.*
+**/*.tfvars
+**/*.tfvars.json
 .env
 .env.*
-
