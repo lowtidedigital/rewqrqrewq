@@ -7,7 +7,7 @@ import BrandLogo from "@/components/BrandLogo";
 import { Check, Star, X, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { PLANS, formatPrice } from "@/lib/plans";
-import { createCheckoutSession } from "@/lib/billing";
+import { createCheckoutSession, createPortalSession } from "@/lib/billing";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSubscription } from "@/contexts/SubscriptionContext";
 import { toast } from "sonner";
@@ -31,8 +31,9 @@ const featureComparison = [
 const Pricing = () => {
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
-  const { currentPlan, isActive } = useSubscription();
+  const { currentPlan, isActive, hasProPlanAccess } = useSubscription();
   const [isUpgrading, setIsUpgrading] = useState(false);
+  const [isManaging, setIsManaging] = useState(false);
 
   const handleGetStarted = () => {
     if (isAuthenticated) {
@@ -48,12 +49,6 @@ const Pricing = () => {
       return;
     }
 
-    // Already on starter or enterprise
-    if ((currentPlan === 'starter' || currentPlan === 'enterprise') && isActive) {
-      navigate('/dashboard/billing');
-      return;
-    }
-
     setIsUpgrading(true);
     try {
       const { url } = await createCheckoutSession('starter');
@@ -66,16 +61,37 @@ const Pricing = () => {
     }
   };
 
+  const handleManageBilling = async () => {
+    setIsManaging(true);
+    try {
+      const { url } = await createPortalSession();
+      window.location.href = url;
+    } catch (error: any) {
+      console.error('Portal error:', error);
+      toast.error(error.message || "Failed to open billing portal");
+    } finally {
+      setIsManaging(false);
+    }
+  };
+
   const getStarterButtonText = () => {
     if (!isAuthenticated) return 'Start with Starter';
-    if ((currentPlan === 'starter' || currentPlan === 'enterprise') && isActive) return 'Manage Plan';
+    if (hasProPlanAccess) return 'Manage Billing';
     return 'Upgrade to Starter';
+  };
+
+  const handleStarterClick = () => {
+    if (hasProPlanAccess) {
+      handleManageBilling();
+    } else {
+      handleUpgrade();
+    }
   };
 
   const plans = [
     {
       ...PLANS.free,
-      cta: isAuthenticated ? "Current Plan" : "Get Started",
+      cta: isAuthenticated && currentPlan === 'free' ? "Current Plan" : "Get Started",
       popular: false,
       onClick: handleGetStarted,
       isCurrentPlan: isAuthenticated && currentPlan === 'free',
@@ -84,8 +100,8 @@ const Pricing = () => {
       ...PLANS.starter,
       cta: getStarterButtonText(),
       popular: true,
-      onClick: handleUpgrade,
-      isCurrentPlan: isAuthenticated && currentPlan === 'starter' && isActive,
+      onClick: handleStarterClick,
+      isCurrentPlan: false, // Never disable - show Manage Billing for paid users
     },
   ];
 
@@ -159,9 +175,9 @@ const Pricing = () => {
                   size="lg"
                   className="w-full"
                   onClick={plan.onClick}
-                  disabled={plan.isCurrentPlan || (plan.popular && isUpgrading)}
+                  disabled={plan.isCurrentPlan || (plan.popular && (isUpgrading || isManaging))}
                 >
-                  {plan.popular && isUpgrading ? (
+                  {plan.popular && (isUpgrading || isManaging) ? (
                     <Loader2 className="w-4 h-4 animate-spin" />
                   ) : plan.isCurrentPlan ? (
                     <>

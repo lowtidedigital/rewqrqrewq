@@ -135,6 +135,7 @@ class BillingClient {
       sessionId?: string;
     }>('POST', '/billing/checkout', {
       plan: planName,
+      returnUrl: `${window.location.origin}/dashboard/billing`,
     });
 
     // Handle both possible response formats
