@@ -221,6 +221,67 @@ export const confirmForgotPassword = (
   });
 };
 
+// Change password for authenticated user
+export const changePassword = (
+  oldPassword: string,
+  newPassword: string
+): Promise<void> => {
+  return new Promise((resolve, reject) => {
+    const cognitoUser = userPool.getCurrentUser();
+    if (!cognitoUser) {
+      reject({ code: 'NotAuthenticated', message: 'You must be logged in to change your password' });
+      return;
+    }
+
+    cognitoUser.getSession((err: Error | null, session: CognitoUserSession | null) => {
+      if (err || !session || !session.isValid()) {
+        reject({ code: 'SessionExpired', message: 'Your session has expired. Please log in again' });
+        return;
+      }
+
+      cognitoUser.changePassword(oldPassword, newPassword, (changeErr) => {
+        if (changeErr) {
+          reject(formatAuthError(changeErr));
+          return;
+        }
+        resolve();
+      });
+    });
+  });
+};
+
+// Update user attributes (like name)
+export const updateUserAttributes = (
+  attributes: { Name: string; Value: string }[]
+): Promise<void> => {
+  return new Promise((resolve, reject) => {
+    const cognitoUser = userPool.getCurrentUser();
+    if (!cognitoUser) {
+      reject({ code: 'NotAuthenticated', message: 'You must be logged in' });
+      return;
+    }
+
+    cognitoUser.getSession((err: Error | null, session: CognitoUserSession | null) => {
+      if (err || !session || !session.isValid()) {
+        reject({ code: 'SessionExpired', message: 'Your session has expired. Please log in again' });
+        return;
+      }
+
+      const cognitoAttributes = attributes.map(
+        attr => new CognitoUserAttribute(attr)
+      );
+
+      cognitoUser.updateAttributes(cognitoAttributes, (updateErr) => {
+        if (updateErr) {
+          reject(formatAuthError(updateErr));
+          return;
+        }
+        resolve();
+      });
+    });
+  });
+};
+
 // Format Cognito errors to consistent format
 const formatAuthError = (error: any): AuthError => {
   const code = error.code || error.name || 'UnknownError';
