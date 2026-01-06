@@ -10,22 +10,22 @@ interface BrandLogoProps {
 
 const variantConfig = {
   sidebar: {
-    imageClass: "h-20 max-w-[220px]", // Large for sidebar with whitespace
-    container: "px-3 py-3",
+    imageClass: "h-14 max-w-[200px]", // Clean wordmark sizing
+    container: "px-2 py-2",
     showContainer: true,
   },
   drawer: {
-    imageClass: "h-24 max-w-[260px]", // Larger for mobile drawer
-    container: "px-3 py-4",
+    imageClass: "h-16 max-w-[220px]", // Larger for mobile drawer
+    container: "px-3 py-3",
     showContainer: true,
   },
   header: {
-    imageClass: "h-12 max-w-[180px]", // Bigger for navbar visibility
+    imageClass: "h-10 max-w-[160px]", // Navbar sizing
     container: "",
     showContainer: false,
   },
   collapsed: {
-    imageClass: "h-12 w-12", // Square for collapsed
+    imageClass: "h-10 w-10", // Square icon-only for collapsed
     container: "p-1",
     showContainer: true,
   },
