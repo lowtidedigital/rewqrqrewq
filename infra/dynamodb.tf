@@ -14,22 +14,6 @@
 # 3. Fast slug lookup: PK=SLUG#{slug}, SK=METADATA
 # 4. Get links by creation date: GSI1 (userId-createdAt-index)
 
-resource "aws_dynamodb_table" "billing" {
-  name         = "${var.project_name}-billing-${var.environment}"
-  billing_mode = "PAY_PER_REQUEST"
-  hash_key     = "user_id"
-
-  attribute {
-    name = "user_id"
-    type = "S"
-  }
-
-  tags = {
-    Name = "${var.project_name}-billing-${var.environment}"
-  }
-}
-
-
 resource "aws_dynamodb_table" "links" {
   name         = "${var.project_name}-links-${var.environment}"
   billing_mode = var.dynamodb_billing_mode
@@ -179,5 +163,24 @@ resource "aws_dynamodb_table" "aggregates" {
 
   tags = {
     Name = "${var.project_name}-aggregates-table"
+  }
+}
+
+# =============================================================================
+# BILLING TABLE
+# =============================================================================
+
+resource "aws_dynamodb_table" "billing" {
+  name         = "${var.project_name}-billing-${var.environment}"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "userSub"
+
+  attribute {
+    name = "userSub"
+    type = "S"
+  }
+
+  tags = {
+    Name = "${var.project_name}-billing"
   }
 }

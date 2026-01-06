@@ -1,0 +1,9 @@
+{
+  "userSub": { "S": "44e8a408-5041-7000-88b1-4c44317ecbad" },
+  "plan": { "S": "free" },
+  "status": { "S": "none" },
+  "stripeCustomerId": { "S": "" },
+  "subscriptionId": { "S": "" },
+  "currentPeriodEnd": { "N": "0" },
+  "updatedAt": { "S": "01/06/2026 13:01:08.ToUniversalTime().ToString('o')" }
+}

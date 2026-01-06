@@ -78,3 +78,7 @@ output "frontend_config" {
   })
   sensitive = false
 }
+
+output "dynamodb_billing_table" {
+  value = aws_dynamodb_table.billing.name
+}

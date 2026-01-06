@@ -184,6 +184,7 @@ resource "aws_lambda_function" "billing_api" {
   handler       = "billing_api.handler"
   runtime       = "nodejs20.x"
 
+
   filename         = "${path.module}/../backend/dist/billing_api.zip"
   source_code_hash = filebase64sha256("${path.module}/../backend/dist/billing_api.zip")
 
@@ -196,6 +197,7 @@ resource "aws_lambda_function" "billing_api" {
       ANALYTICS_TABLE  = aws_dynamodb_table.analytics.name
       AGGREGATES_TABLE = aws_dynamodb_table.aggregates.name
       ENVIRONMENT      = var.environment
+      BILLING_TABLE    = aws_dynamodb_table.billing.name
 
       # Stripe
       STRIPE_SECRET_KEY     = var.stripe_secret_key
@@ -220,6 +222,7 @@ resource "aws_lambda_function" "stripe_webhook" {
   handler       = "stripe_webhook.handler"
   runtime       = "nodejs20.x"
 
+
   filename         = "${path.module}/../backend/dist/stripe_webhook.zip"
   source_code_hash = filebase64sha256("${path.module}/../backend/dist/stripe_webhook.zip")
 
@@ -228,6 +231,7 @@ resource "aws_lambda_function" "stripe_webhook" {
 
   environment {
     variables = {
+      BILLING_TABLE    = aws_dynamodb_table.billing.name
       LINKS_TABLE      = aws_dynamodb_table.links.name
       ANALYTICS_TABLE  = aws_dynamodb_table.analytics.name
       AGGREGATES_TABLE = aws_dynamodb_table.aggregates.name
@@ -264,11 +268,15 @@ resource "aws_cloudwatch_log_group" "analytics_api" {
 resource "aws_cloudwatch_log_group" "billing_api" {
   name              = "/aws/lambda/${aws_lambda_function.billing_api.function_name}"
   retention_in_days = 14
+
+
 }
 
 resource "aws_cloudwatch_log_group" "stripe_webhook" {
   name              = "/aws/lambda/${aws_lambda_function.stripe_webhook.function_name}"
   retention_in_days = 14
+
+
 }
 
 
