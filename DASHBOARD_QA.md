@@ -218,6 +218,45 @@ Search codebase for these terms - should NOT appear in production UI:
 
 ---
 
+## 9. Layout: Sidebar Collapse/Expand Gap Test
+
+- [ ] **Desktop collapsed state**: Click collapse button → sidebar shrinks to 72px, main content expands immediately with no dead space
+- [ ] **Desktop expanded state**: Click expand button → sidebar expands to 260px, main content adjusts smoothly
+- [ ] **Transition animation**: Collapse/expand animates smoothly (200ms) with no flickering or jumping
+- [ ] **No horizontal scroll**: At any width, no horizontal scrollbar appears on the main content area
+
+---
+
+## 10. Layout: Logo Visibility Test
+
+### Desktop Sidebar
+- [ ] Logo is displayed at 48px height (expanded) or 36px height (collapsed)
+- [ ] Logo is inside a rounded container with subtle background/border
+- [ ] NO separate "Link Harbour" text or "Fast short links" tagline
+- [ ] Logo is clearly visible on both light and dark themes
+
+### Mobile Drawer
+- [ ] Logo is displayed at 56px height
+- [ ] Logo has prominent container with padding
+- [ ] NO duplicate text elements
+- [ ] Divider below the brand area
+
+### Mobile Header
+- [ ] Logo is displayed at 40px height
+- [ ] Logo is centered between menu trigger and spacer
+- [ ] Tapping logo navigates to /dashboard
+
+---
+
+## 11. Layout: Header/Search Alignment Test
+
+- [ ] Search bar stays properly aligned after sidebar collapse
+- [ ] Header does not shift or jump during transitions
+- [ ] User profile section remains visible and correctly positioned
+- [ ] Notification bell icon properly spaced
+
+---
+
 ## Sign-Off
 
 | Area | Tested By | Date | Status |
@@ -230,6 +269,7 @@ Search codebase for these terms - should NOT appear in production UI:
 | No Demo Content | | | |
 | Domain Config | | | |
 | Error Handling | | | |
+| Layout Tests | | | |
 
 **Overall Status:** [ ] PASS / [ ] FAIL
 

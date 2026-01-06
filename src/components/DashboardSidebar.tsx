@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { 
   LayoutDashboard, 
   Link2, 
@@ -11,14 +11,28 @@ import {
   ChevronRight,
   CreditCard,
   Menu,
-  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import Logo from "@/components/Logo";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import BrandLogo from "@/components/BrandLogo";
 import { cn } from "@/lib/utils";
-import { useState } from "react";
+import { useState, createContext, useContext } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { Separator } from "@/components/ui/separator";
+
+// Sidebar context for sharing collapsed state with layout
+interface SidebarContextType {
+  collapsed: boolean;
+  setCollapsed: (value: boolean) => void;
+}
+
+const SidebarContext = createContext<SidebarContextType>({
+  collapsed: false,
+  setCollapsed: () => {},
+});
+
+export const useSidebar = () => useContext(SidebarContext);
 
 const sidebarLinks = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
@@ -28,69 +42,62 @@ const sidebarLinks = [
   { icon: Settings, label: "Settings", path: "/dashboard/settings" },
 ];
 
-// Shared Brand Header Component
-const BrandHeader = ({ collapsed = false, size = "lg" }: { collapsed?: boolean; size?: "md" | "lg" }) => (
-  <div className={cn(
-    "flex flex-col",
-    collapsed ? "items-center py-4 px-2" : "p-5"
-  )}>
-    <Link to="/dashboard" className="flex items-center group">
-      <Logo 
-        showText={!collapsed} 
-        size={size}
-        className={cn(
-          "transition-all duration-200",
-          !collapsed && "hover:opacity-90"
-        )}
-      />
-    </Link>
-    {!collapsed && (
-      <p className="text-xs text-sidebar-foreground/50 mt-1.5 pl-0.5">
-        Fast short links
-      </p>
-    )}
-  </div>
-);
-
-// Shared Navigation Component
+// Navigation with tooltips for collapsed state
 const NavigationLinks = ({ collapsed, onNavigate }: { collapsed: boolean; onNavigate?: () => void }) => {
   const location = useLocation();
   
   return (
-    <nav className="flex-1 py-3 px-3 space-y-1">
-      {sidebarLinks.map((link) => {
-        const isActive = location.pathname === link.path || 
-          (link.path !== "/dashboard" && location.pathname.startsWith(link.path));
-        
-        return (
-          <Link
-            key={link.path}
-            to={link.path}
-            onClick={onNavigate}
-            className={cn(
-              "flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 group relative",
-              isActive
-                ? "bg-sidebar-accent text-sidebar-foreground"
-                : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
-            )}
-          >
-            <link.icon className={cn(
-              "w-5 h-5 flex-shrink-0 transition-colors",
-              isActive ? "text-sidebar-primary" : "group-hover:text-sidebar-primary"
-            )} />
-            {!collapsed && (
-              <span className="font-medium">{link.label}</span>
-            )}
-            {isActive && (
-              <motion.div
-                layoutId="sidebar-active"
-                className="absolute left-0 w-1 h-6 bg-sidebar-primary rounded-r-full"
-              />
-            )}
-          </Link>
-        );
-      })}
-    </nav>
+    <TooltipProvider delayDuration={0}>
+      <nav className="flex-1 py-3 px-3 space-y-1">
+        {sidebarLinks.map((link) => {
+          const isActive = location.pathname === link.path || 
+            (link.path !== "/dashboard" && location.pathname.startsWith(link.path));
+          
+          const navItem = (
+            <Link
+              to={link.path}
+              onClick={onNavigate}
+              className={cn(
+                "flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 group relative",
+                collapsed && "justify-center px-2",
+                isActive
+                  ? "bg-sidebar-accent text-sidebar-foreground"
+                  : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
+              )}
+            >
+              <link.icon className={cn(
+                "w-5 h-5 flex-shrink-0 transition-colors",
+                isActive ? "text-sidebar-primary" : "group-hover:text-sidebar-primary"
+              )} />
+              {!collapsed && (
+                <span className="font-medium">{link.label}</span>
+              )}
+              {isActive && (
+                <motion.div
+                  layoutId="sidebar-active"
+                  className="absolute left-0 w-1 h-6 bg-sidebar-primary rounded-r-full"
+                />
+              )}
+            </Link>
+          );
+          
+          if (collapsed) {
+            return (
+              <Tooltip key={link.path}>
+                <TooltipTrigger asChild>
+                  <div>{navItem}</div>
+                </TooltipTrigger>
+                <TooltipContent side="right" sideOffset={8}>
+                  {link.label}
+                </TooltipContent>
+              </Tooltip>
+            );
+          }
+          
+          return <div key={link.path}>{navItem}</div>;
+        })}
+      </nav>
+    </TooltipProvider>
   );
 };
 
@@ -106,46 +113,73 @@ const DashboardSidebar = () => {
   };
 
   return (
-    <>
+    <SidebarContext.Provider value={{ collapsed, setCollapsed }}>
       {/* Desktop Sidebar */}
       <motion.aside
         initial={{ x: -20, opacity: 0 }}
         animate={{ x: 0, opacity: 1 }}
         transition={{ duration: 0.3 }}
         className={cn(
-          "fixed left-0 top-0 bottom-0 z-40 hidden md:flex flex-col bg-sidebar border-r border-sidebar-border transition-all duration-300",
-          collapsed ? "w-[72px]" : "w-64"
+          "hidden md:flex flex-col bg-sidebar border-r border-sidebar-border h-screen sticky top-0 transition-all duration-200 overflow-hidden",
+          collapsed ? "w-[72px]" : "w-[260px]"
         )}
       >
         {/* Brand Header */}
         <div className="border-b border-sidebar-border/50 bg-sidebar-accent/30">
-          <div className="flex items-center justify-between">
-            <BrandHeader collapsed={collapsed} size={collapsed ? "md" : "lg"} />
-            <button
-              onClick={() => setCollapsed(!collapsed)}
-              className={cn(
-                "p-2 rounded-md hover:bg-sidebar-accent text-sidebar-foreground/50 hover:text-sidebar-foreground transition-colors",
-                collapsed ? "mx-auto" : "mr-3"
-              )}
-              aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-            >
-              {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
-            </button>
+          <div className="flex items-center justify-between p-3">
+            <BrandLogo 
+              variant={collapsed ? "collapsed" : "sidebar"} 
+              linkTo="/dashboard"
+              className={cn(collapsed && "mx-auto")}
+            />
+            {!collapsed && (
+              <button
+                onClick={() => setCollapsed(true)}
+                className="p-2 rounded-md hover:bg-sidebar-accent text-sidebar-foreground/50 hover:text-sidebar-foreground transition-colors"
+                aria-label="Collapse sidebar"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+            )}
           </div>
+          {collapsed && (
+            <div className="flex justify-center pb-3">
+              <button
+                onClick={() => setCollapsed(false)}
+                className="p-2 rounded-md hover:bg-sidebar-accent text-sidebar-foreground/50 hover:text-sidebar-foreground transition-colors"
+                aria-label="Expand sidebar"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          )}
         </div>
+
+        <Separator className="bg-sidebar-border/30" />
 
         {/* Create Link Button */}
         <div className="p-3">
-          <Button 
-            variant="hero" 
-            className={cn("w-full", collapsed && "px-0 justify-center")}
-            asChild
-          >
-            <Link to="/dashboard/links/new">
-              <Plus className="w-4 h-4" />
-              {!collapsed && <span>Create Link</span>}
-            </Link>
-          </Button>
+          <TooltipProvider delayDuration={0}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button 
+                  variant="hero" 
+                  className={cn("w-full", collapsed && "px-0 justify-center")}
+                  asChild
+                >
+                  <Link to="/dashboard/links/new">
+                    <Plus className="w-4 h-4" />
+                    {!collapsed && <span>Create Link</span>}
+                  </Link>
+                </Button>
+              </TooltipTrigger>
+              {collapsed && (
+                <TooltipContent side="right" sideOffset={8}>
+                  Create Link
+                </TooltipContent>
+              )}
+            </Tooltip>
+          </TooltipProvider>
         </div>
 
         {/* Navigation */}
@@ -153,30 +187,39 @@ const DashboardSidebar = () => {
 
         {/* Footer */}
         <div className="p-3 border-t border-sidebar-border">
-          <button
-            onClick={handleSignOut}
-            className={cn(
-              "flex items-center gap-3 px-3 py-2.5 rounded-lg w-full text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground transition-colors",
-              collapsed && "justify-center"
-            )}
-          >
-            <LogOut className="w-5 h-5 flex-shrink-0" />
-            {!collapsed && <span className="font-medium">Sign Out</span>}
-          </button>
+          <TooltipProvider delayDuration={0}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={handleSignOut}
+                  className={cn(
+                    "flex items-center gap-3 px-3 py-2.5 rounded-lg w-full text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground transition-colors",
+                    collapsed && "justify-center px-2"
+                  )}
+                >
+                  <LogOut className="w-5 h-5 flex-shrink-0" />
+                  {!collapsed && <span className="font-medium">Sign Out</span>}
+                </button>
+              </TooltipTrigger>
+              {collapsed && (
+                <TooltipContent side="right" sideOffset={8}>
+                  Sign Out
+                </TooltipContent>
+              )}
+            </Tooltip>
+          </TooltipProvider>
         </div>
       </motion.aside>
 
-      {/* Mobile Sidebar Trigger (visible on mobile only) */}
+      {/* Mobile Header with Trigger */}
       <div className="md:hidden fixed top-0 left-0 right-0 z-50 h-16 bg-background/95 backdrop-blur-sm border-b border-border flex items-center px-4">
         <MobileSidebar onSignOut={handleSignOut} />
         <div className="flex-1 flex justify-center">
-          <Link to="/dashboard">
-            <Logo size="md" showText={true} />
-          </Link>
+          <BrandLogo variant="header" linkTo="/dashboard" />
         </div>
-        <div className="w-10" /> {/* Spacer for balance */}
+        <div className="w-10" />
       </div>
-    </>
+    </SidebarContext.Provider>
   );
 };
 
@@ -193,9 +236,11 @@ const MobileSidebar = ({ onSignOut }: { onSignOut: () => void }) => {
       </SheetTrigger>
       <SheetContent side="left" className="w-72 p-0 bg-sidebar border-sidebar-border">
         {/* Brand Header */}
-        <div className="border-b border-sidebar-border/50 bg-sidebar-accent/30">
-          <BrandHeader collapsed={false} size="lg" />
+        <div className="border-b border-sidebar-border/50 bg-sidebar-accent/30 p-4">
+          <BrandLogo variant="drawer" linkTo="/dashboard" />
         </div>
+
+        <Separator className="bg-sidebar-border/30" />
 
         {/* Create Link Button */}
         <div className="p-4">

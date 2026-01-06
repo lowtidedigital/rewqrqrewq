@@ -5,13 +5,25 @@ import DashboardHeader from "@/components/DashboardHeader";
 const DashboardLayout = () => {
   return (
     <div className="min-h-screen bg-background">
-      <DashboardSidebar />
-      {/* Desktop: offset for sidebar. Mobile: offset for top header */}
-      <div className="md:pl-64 pt-16 md:pt-0 transition-all duration-300">
-        <DashboardHeader />
-        <main className="p-4 md:p-6">
-          <Outlet />
-        </main>
+      {/* Desktop: CSS Grid layout for sidebar + content */}
+      <div className="hidden md:grid md:grid-cols-[auto_1fr] min-h-screen">
+        <DashboardSidebar />
+        <div className="flex flex-col min-w-0">
+          <DashboardHeader />
+          <main className="flex-1 p-4 md:p-6 overflow-x-hidden">
+            <Outlet />
+          </main>
+        </div>
+      </div>
+
+      {/* Mobile: stacked layout with fixed header */}
+      <div className="md:hidden">
+        <DashboardSidebar />
+        <div className="pt-16">
+          <main className="p-4">
+            <Outlet />
+          </main>
+        </div>
       </div>
     </div>
   );
