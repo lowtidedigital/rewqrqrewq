@@ -15,6 +15,21 @@ import {
   Code,
 } from "lucide-react";
 
+// Business logos for social proof
+import nexatechLogo from "@/assets/reviews/nexatech.png";
+import summitGadgetsLogo from "@/assets/reviews/summit-gadgets.png";
+import eliteReviewsLogo from "@/assets/reviews/elite-reviews.png";
+import gizmoGuruLogo from "@/assets/reviews/gizmo-guru.png";
+import techSavvyLogo from "@/assets/reviews/techsavvy.png";
+
+const businessLogos = [
+  { src: nexatechLogo, alt: "NexaTech" },
+  { src: summitGadgetsLogo, alt: "Summit Gadgets" },
+  { src: eliteReviewsLogo, alt: "Elite Reviews" },
+  { src: gizmoGuruLogo, alt: "Gizmo Guru" },
+  { src: techSavvyLogo, alt: "TechSavvy" },
+];
+
 const features = [
   {
     icon: Link2,
@@ -124,12 +139,12 @@ const Index = () => {
               className="mt-12 flex items-center justify-center gap-6"
             >
               <div className="flex -space-x-2">
-                {[1, 2, 3, 4, 5].map((i) => (
+                {businessLogos.map((logo) => (
                   <div
-                    key={i}
-                    className="w-10 h-10 rounded-full border-2 border-background gradient-primary flex items-center justify-center text-xs font-bold text-primary-foreground"
+                    key={logo.alt}
+                    className="w-10 h-10 rounded-full border-2 border-background bg-card overflow-hidden flex items-center justify-center"
                   >
-                    {String.fromCharCode(64 + i)}
+                    <img src={logo.src} alt={logo.alt} className="w-full h-full object-cover" />
                   </div>
                 ))}
               </div>
