@@ -90,21 +90,23 @@ variable "tags" {
 }
 
 variable "stripe_secret_key" {
-  type      = string
-  sensitive = true
-}
-
-variable "stripe_pro_price_id" {
-  description = "Stripe Price ID for the paid plan (Starter/Pro)"
+  description = "Stripe secret key (sk_...)"
   type        = string
   sensitive   = true
 }
 
+variable "stripe_pro_price_id" {
+  description = "Stripe Price ID for the paid plan"
+  type        = string
+  sensitive   = true
+}
 
 variable "stripe_webhook_secret" {
-  type      = string
-  sensitive = true
+  description = "Stripe webhook signing secret (whsec_...)"
+  type        = string
+  sensitive   = true
 }
+
 
 variable "app_url" {
   type    = string
