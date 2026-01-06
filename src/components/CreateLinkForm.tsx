@@ -23,20 +23,24 @@ import {
   FileText, 
   Zap,
   AlertCircle,
-  Check
+  Check,
+  ExternalLink,
+  Copy
 } from "lucide-react";
 import { config, buildShortUrl } from "@/config";
-import { api, CreateLinkInput } from "@/lib/api";
+import { api, CreateLinkInput, Link } from "@/lib/api";
+import { toast } from "sonner";
 
 interface CreateLinkFormProps {
-  onSuccess?: (link: any) => void;
+  onSuccess?: (link: Link) => void;
 }
 
 const CreateLinkForm = ({ onSuccess }: CreateLinkFormProps) => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [error, setError] = useState<string | null>(null);
-  const [createdSlug, setCreatedSlug] = useState<string | null>(null);
+  const [createdLink, setCreatedLink] = useState<Link | null>(null);
+  const [copied, setCopied] = useState(false);
   
   const [formData, setFormData] = useState({
     longUrl: "",
@@ -53,24 +57,59 @@ const CreateLinkForm = ({ onSuccess }: CreateLinkFormProps) => {
 
   const createMutation = useMutation({
     mutationFn: (input: CreateLinkInput) => api.createLink(input),
-    onSuccess: (link) => {
-      // Invalidate queries to refresh data
-      queryClient.invalidateQueries({ queryKey: ['links'] });
-      queryClient.invalidateQueries({ queryKey: ['recentLinks'] });
-      queryClient.invalidateQueries({ queryKey: ['dashboardStats'] });
+    onSuccess: async (link) => {
+      const shortUrl = buildShortUrl(link.slug);
       
-      setCreatedSlug(link.slug);
+      // Dev-mode diagnostics
+      if (import.meta.env.DEV) {
+        console.log('[LinkHarbour Diagnostics] Link created successfully:');
+        console.log('  - Slug:', link.slug);
+        console.log('  - Short URL:', shortUrl);
+        console.log('  - Link ID:', link.link_id);
+      }
+
+      // Invalidate and refetch queries to refresh data
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['links'] }),
+        queryClient.invalidateQueries({ queryKey: ['recentLinks'] }),
+        queryClient.invalidateQueries({ queryKey: ['dashboardStats'] }),
+      ]);
+
+      // Dev-mode: verify the GET /links works
+      if (import.meta.env.DEV) {
+        try {
+          const linksCheck = await api.getLinks({ limit: 1 });
+          console.log('[LinkHarbour Diagnostics] GET /links succeeded:', linksCheck.items.length, 'items');
+        } catch (err) {
+          console.error('[LinkHarbour Diagnostics] GET /links failed:', err);
+        }
+      }
+      
+      // Store the created link to show success UI
+      setCreatedLink(link);
+      
+      // Show success toast
+      toast.success("Link created successfully!", {
+        description: shortUrl,
+      });
       
       if (onSuccess) {
         onSuccess(link);
       }
-
-      setTimeout(() => {
-        navigate("/dashboard/links");
-      }, 1500);
     },
     onError: (err: any) => {
-      setError(err.message || "Failed to create link. Please try again.");
+      const errorMessage = err.message || "Failed to create link. Please try again.";
+      setError(errorMessage);
+      
+      // Show error toast - do NOT reset any state
+      toast.error("Failed to create link", {
+        description: errorMessage,
+      });
+      
+      // Dev-mode diagnostics
+      if (import.meta.env.DEV) {
+        console.error('[LinkHarbour Diagnostics] Link creation failed:', err);
+      }
     },
   });
 
@@ -122,7 +161,35 @@ const CreateLinkForm = ({ onSuccess }: CreateLinkFormProps) => {
     });
   };
 
-  if (createdSlug) {
+  const handleCopyShortUrl = async () => {
+    if (!createdLink) return;
+    try {
+      await navigator.clipboard.writeText(buildShortUrl(createdLink.slug));
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error("Failed to copy:", err);
+    }
+  };
+
+  const handleCreateAnother = () => {
+    setCreatedLink(null);
+    setFormData({
+      longUrl: "",
+      customSlug: "",
+      title: "",
+      tags: [],
+      notes: "",
+      expiresAt: "",
+      redirectType: "302",
+      enabled: true,
+    });
+  };
+
+  // Show success state with link details
+  if (createdLink) {
+    const shortUrl = buildShortUrl(createdLink.slug);
+    
     return (
       <motion.div
         initial={{ scale: 0.9, opacity: 0 }}
@@ -134,10 +201,37 @@ const CreateLinkForm = ({ onSuccess }: CreateLinkFormProps) => {
         </div>
         <h3 className="font-display text-2xl font-bold mb-2">Link Created!</h3>
         <p className="text-muted-foreground mb-4">Your short link is ready to use</p>
-        <div className="p-4 rounded-xl bg-secondary/50 border border-border">
-          <code className="text-primary font-mono">
-            {buildShortUrl(createdSlug)}
-          </code>
+        
+        {/* Short URL display with copy */}
+        <div className="p-4 rounded-xl bg-secondary/50 border border-border mb-6 w-full max-w-md">
+          <div className="flex items-center justify-between gap-3">
+            <a 
+              href={shortUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary font-mono hover:underline flex items-center gap-2"
+            >
+              {shortUrl}
+              <ExternalLink className="w-4 h-4" />
+            </a>
+            <Button variant="ghost" size="icon-sm" onClick={handleCopyShortUrl}>
+              {copied ? (
+                <Check className="w-4 h-4 text-success" />
+              ) : (
+                <Copy className="w-4 h-4" />
+              )}
+            </Button>
+          </div>
+        </div>
+
+        {/* Action buttons */}
+        <div className="flex items-center gap-3">
+          <Button variant="outline" onClick={handleCreateAnother}>
+            Create Another
+          </Button>
+          <Button variant="hero" onClick={() => navigate("/dashboard/links")}>
+            View All Links
+          </Button>
         </div>
       </motion.div>
     );

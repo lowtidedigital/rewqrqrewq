@@ -38,11 +38,11 @@ import {
 import { cn } from "@/lib/utils";
 import { config, buildShortUrl } from "@/config";
 
-// Mock data for the link
+// Mock data for the link - uses buildShortUrl for correct domain
 const mockLink = {
   id: "1",
   slug: "spring-sale",
-  shortUrl: buildShortUrl("spring-sale"),
+  shortUrl: buildShortUrl("spring-sale"), // Uses lh.linkharbour.io/r/{slug}
   longUrl: "https://mystore.com/collections/spring-2024-sale?utm_source=social&utm_medium=instagram",
   title: "Spring Sale Campaign",
   clicks: 4521,
