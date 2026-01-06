@@ -2,10 +2,10 @@ import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import Navbar from "@/components/Navbar";
-import Logo from "@/components/Logo";
+import BrandLogo from "@/components/BrandLogo";
 import { Check, Star, X } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { PLANS, PlanName, formatPrice } from "@/lib/plans";
+import { PLANS, formatPrice } from "@/lib/plans";
 
 const plans = [
   {
@@ -16,37 +16,24 @@ const plans = [
   {
     ...PLANS.starter,
     cta: "Start with Starter",
-    popular: false,
-  },
-  {
-    ...PLANS.pro,
-    cta: "Upgrade to Pro",
     popular: true,
-  },
-  {
-    ...PLANS.business,
-    cta: "Go Business",
-    popular: false,
   },
 ];
 
-const enterprisePlan = {
-  ...PLANS.enterprise,
-  cta: "Contact Sales",
-};
-
-// Feature comparison for the table
+// Feature comparison for the table (3-tier)
 const featureComparison = [
-  { feature: "Short links", free: "50", starter: "250", pro: "2,000", business: "10,000" },
-  { feature: "Tracked clicks/month", free: "1,000", starter: "10,000", pro: "100,000", business: "500,000" },
-  { feature: "Analytics retention", free: "7 days", starter: "30 days", pro: "1 year", business: "2 years" },
-  { feature: "QR codes", free: "PNG", starter: "PNG + SVG", pro: "PNG + SVG", business: "PNG + SVG" },
-  { feature: "Custom slugs", free: false, starter: true, pro: true, business: true },
-  { feature: "Link expiration", free: false, starter: true, pro: true, business: true },
-  { feature: "Custom domains", free: "—", starter: "1", pro: "5", business: "20" },
-  { feature: "API access", free: false, starter: false, pro: true, business: true },
-  { feature: "Team members", free: "—", starter: "—", pro: "—", business: "10" },
-  { feature: "Priority support", free: false, starter: true, pro: true, business: true },
+  { feature: "Short links", free: "50", starter: "500", enterprise: "Unlimited" },
+  { feature: "Tracked clicks/month", free: "1,000", starter: "25,000", enterprise: "Unlimited" },
+  { feature: "Analytics retention", free: "7 days", starter: "90 days", enterprise: "Unlimited" },
+  { feature: "QR codes", free: "PNG", starter: "PNG + SVG", enterprise: "PNG + SVG" },
+  { feature: "Custom slugs", free: false, starter: true, enterprise: true },
+  { feature: "Link expiration", free: false, starter: true, enterprise: true },
+  { feature: "Custom domains", free: "—", starter: "3", enterprise: "Unlimited" },
+  { feature: "API access", free: false, starter: true, enterprise: true },
+  { feature: "Priority support", free: false, starter: true, enterprise: true },
+  { feature: "SSO/SAML", free: false, starter: false, enterprise: true },
+  { feature: "Dedicated account manager", free: false, starter: false, enterprise: true },
+  { feature: "SLA guarantee", free: false, starter: false, enterprise: true },
 ];
 
 const Pricing = () => {
@@ -68,12 +55,12 @@ const Pricing = () => {
               <span className="gradient-text">Pricing</span>
             </h1>
             <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-              Start free, scale as you grow. No hidden fees, no surprises.
+              Start free, upgrade when you need more. API access included in Starter.
             </p>
           </motion.div>
 
           {/* Pricing Cards */}
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-7xl mx-auto mb-16">
+          <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto mb-16">
             {plans.map((plan, index) => (
               <motion.div
                 key={plan.name}
@@ -81,9 +68,9 @@ const Pricing = () => {
                 animate={{ y: 0, opacity: 1 }}
                 transition={{ duration: 0.5, delay: index * 0.1 }}
                 className={cn(
-                  "relative rounded-2xl border bg-card p-6 flex flex-col",
+                  "relative rounded-2xl border bg-card p-8 flex flex-col",
                   plan.popular
-                    ? "border-primary shadow-xl shadow-primary/10 lg:scale-105"
+                    ? "border-primary shadow-xl shadow-primary/10 md:scale-105"
                     : "border-border"
                 )}
               >
@@ -96,27 +83,28 @@ const Pricing = () => {
                   </div>
                 )}
 
-                <div className="mb-5">
-                  <h3 className="font-display text-xl font-bold mb-2">{plan.displayName}</h3>
+                <div className="mb-6">
+                  <h3 className="font-display text-2xl font-bold mb-2">{plan.displayName}</h3>
                   <div className="flex items-baseline gap-1">
-                    <span className="font-display text-4xl font-bold">{formatPrice(plan)}</span>
+                    <span className="font-display text-5xl font-bold">{formatPrice(plan)}</span>
                     {plan.price > 0 && (
-                      <span className="text-muted-foreground">/month</span>
+                      <span className="text-muted-foreground text-lg">/month</span>
                     )}
                   </div>
                 </div>
 
-                <ul className="space-y-2.5 flex-1 mb-6">
+                <ul className="space-y-3 flex-1 mb-8">
                   {plan.features.map((feature) => (
-                    <li key={feature} className="flex items-start gap-2">
-                      <Check className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
-                      <span className="text-sm text-muted-foreground">{feature}</span>
+                    <li key={feature} className="flex items-start gap-3">
+                      <Check className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
+                      <span className="text-muted-foreground">{feature}</span>
                     </li>
                   ))}
                 </ul>
 
                 <Button
                   variant={plan.popular ? "hero" : "outline"}
+                  size="lg"
                   className="w-full"
                   asChild
                 >
@@ -130,13 +118,13 @@ const Pricing = () => {
           <motion.div
             initial={{ y: 20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
-            transition={{ duration: 0.5, delay: 0.5 }}
+            transition={{ duration: 0.5, delay: 0.3 }}
             className="max-w-3xl mx-auto mb-20"
           >
             <div className="rounded-2xl border border-border bg-card p-8 text-center">
               <h3 className="font-display text-2xl font-bold mb-2">Enterprise</h3>
               <p className="text-muted-foreground mb-6 max-w-lg mx-auto">
-                Need unlimited links, custom integrations, SLA guarantees, or dedicated infrastructure? 
+                Need unlimited links, custom integrations, SLA guarantees, SSO, or dedicated infrastructure? 
                 Let's build a plan that fits your organization.
               </p>
               <Button variant="hero" size="lg" asChild>
@@ -149,8 +137,8 @@ const Pricing = () => {
           <motion.div
             initial={{ y: 20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
-            transition={{ duration: 0.5, delay: 0.6 }}
-            className="max-w-5xl mx-auto"
+            transition={{ duration: 0.5, delay: 0.4 }}
+            className="max-w-4xl mx-auto"
           >
             <h2 className="font-display text-2xl font-bold text-center mb-8">Compare Plans</h2>
             
@@ -161,9 +149,8 @@ const Pricing = () => {
                     <tr className="bg-muted/50">
                       <th className="text-left py-4 px-4 font-medium">Feature</th>
                       <th className="text-center py-4 px-4 font-medium">Free</th>
-                      <th className="text-center py-4 px-4 font-medium">Starter</th>
-                      <th className="text-center py-4 px-4 font-medium bg-primary/5">Pro</th>
-                      <th className="text-center py-4 px-4 font-medium">Business</th>
+                      <th className="text-center py-4 px-4 font-medium bg-primary/5">Starter</th>
+                      <th className="text-center py-4 px-4 font-medium">Enterprise</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -181,7 +168,7 @@ const Pricing = () => {
                             <span className="text-sm">{row.free}</span>
                           )}
                         </td>
-                        <td className="py-3 px-4 text-center">
+                        <td className="py-3 px-4 text-center bg-primary/5">
                           {typeof row.starter === "boolean" ? (
                             row.starter ? (
                               <Check className="w-4 h-4 text-primary mx-auto" />
@@ -189,29 +176,18 @@ const Pricing = () => {
                               <X className="w-4 h-4 text-muted-foreground/50 mx-auto" />
                             )
                           ) : (
-                            <span className="text-sm">{row.starter}</span>
-                          )}
-                        </td>
-                        <td className="py-3 px-4 text-center bg-primary/5">
-                          {typeof row.pro === "boolean" ? (
-                            row.pro ? (
-                              <Check className="w-4 h-4 text-primary mx-auto" />
-                            ) : (
-                              <X className="w-4 h-4 text-muted-foreground/50 mx-auto" />
-                            )
-                          ) : (
-                            <span className="text-sm font-medium">{row.pro}</span>
+                            <span className="text-sm font-medium">{row.starter}</span>
                           )}
                         </td>
                         <td className="py-3 px-4 text-center">
-                          {typeof row.business === "boolean" ? (
-                            row.business ? (
+                          {typeof row.enterprise === "boolean" ? (
+                            row.enterprise ? (
                               <Check className="w-4 h-4 text-primary mx-auto" />
                             ) : (
                               <X className="w-4 h-4 text-muted-foreground/50 mx-auto" />
                             )
                           ) : (
-                            <span className="text-sm">{row.business}</span>
+                            <span className="text-sm">{row.enterprise}</span>
                           )}
                         </td>
                       </tr>
@@ -226,7 +202,7 @@ const Pricing = () => {
           <motion.div
             initial={{ y: 20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
-            transition={{ duration: 0.5, delay: 0.7 }}
+            transition={{ duration: 0.5, delay: 0.5 }}
             className="text-center mt-16"
           >
             <p className="text-muted-foreground">
@@ -243,7 +219,7 @@ const Pricing = () => {
       <footer className="py-12 px-4 border-t border-border/50">
         <div className="container mx-auto">
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-            <Logo size="sm" showText={false} />
+            <BrandLogo variant="header" />
             <p className="text-muted-foreground text-sm">
               © 2025 Link Harbour. Built with ❤️ on AWS.
             </p>

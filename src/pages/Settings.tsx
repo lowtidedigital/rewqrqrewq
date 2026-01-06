@@ -16,7 +16,6 @@ import {
 } from "@/components/ui/dialog";
 import { 
   User, 
-  Mail, 
   Key, 
   Bell, 
   Shield, 
@@ -28,16 +27,14 @@ import {
   ExternalLink,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useSubscription } from "@/contexts/SubscriptionContext";
 import { changePassword, updateUserAttributes } from "@/lib/cognito";
 import { toast } from "sonner";
-import { PLANS, PlanName, hasApiAccess } from "@/lib/plans";
+import { PLANS } from "@/lib/plans";
 
 const Settings = () => {
   const { user, refreshUser } = useAuth();
-  
-  // TODO: Get from real subscription API
-  const [currentPlan] = useState<PlanName>('free');
-  const canAccessApi = hasApiAccess(currentPlan);
+  const { currentPlan, canAccessApi, isLoading: subLoading } = useSubscription();
   
   // Profile state - initialized from real user data
   const [profile, setProfile] = useState({
@@ -223,16 +220,18 @@ const Settings = () => {
           </div>
           <div className="flex items-center gap-2">
             <h2 className="font-display text-lg font-semibold">API Access</h2>
-            {canAccessApi ? (
+            {subLoading ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : canAccessApi ? (
               <Badge variant="default" className="text-xs">Enabled</Badge>
             ) : (
-              <Badge variant="secondary" className="text-xs">Pro+ Required</Badge>
+              <Badge variant="secondary" className="text-xs">Starter+ Required</Badge>
             )}
           </div>
         </div>
 
         {canAccessApi ? (
-          // Pro+ users see API info
+          // Starter+ users see API info
           <div className="space-y-4">
             <div className="bg-muted/50 rounded-lg p-4 border border-border/50">
               <div className="flex items-start gap-3">
@@ -262,24 +261,20 @@ const Settings = () => {
             </p>
           </div>
         ) : (
-          // Free/Starter users see upgrade prompt
+          // Free users see upgrade prompt
           <div className="bg-amber-500/5 rounded-lg p-4 border border-amber-500/20">
             <div className="flex items-start gap-3">
               <Lock className="w-5 h-5 text-amber-500 mt-0.5" />
               <div>
-                <p className="text-sm text-foreground font-medium">API Access Requires Pro or Business</p>
+                <p className="text-sm text-foreground font-medium">API Access Requires Starter or Enterprise</p>
                 <p className="text-sm text-muted-foreground mt-1">
-                  Programmatic API access is available on Pro ($25/mo) and Business ($75/mo) plans.
-                  {currentPlan === 'starter' && (
-                    <span className="block mt-1 text-amber-600">
-                      Note: Starter plan does not include API access.
-                    </span>
-                  )}
+                  Programmatic API access is available on Starter ($12/mo) and Enterprise plans.
+                  Upgrade to unlock the full Link Harbour API.
                 </p>
                 <div className="mt-3 flex items-center gap-3">
                   <Button variant="hero" size="sm" asChild>
                     <Link to="/dashboard/billing">
-                      Upgrade to Pro
+                      Upgrade to Starter
                     </Link>
                   </Button>
                   <a 
