@@ -211,17 +211,39 @@ class ApiClient {
   // Analytics
   async getLinkAnalytics(
     linkId: string,
-    params?: { start_date?: string; end_date?: string }
+    params?: { start_date?: string; end_date?: string; days?: number }
   ): Promise<AnalyticsSummary> {
     const searchParams = new URLSearchParams();
     if (params?.start_date) searchParams.set('start_date', params.start_date);
     if (params?.end_date) searchParams.set('end_date', params.end_date);
+    if (params?.days) searchParams.set('days', params.days.toString());
 
     const query = searchParams.toString();
-    return this.request<AnalyticsSummary>(
+    const response = await this.request<any>(
       'GET',
       `/links/${linkId}/analytics${query ? `?${query}` : ''}`
     );
+
+    // Transform camelCase backend response to snake_case frontend format
+    return {
+      total_clicks: response.totalClicks ?? response.total_clicks ?? 0,
+      clicks_today: response.summary?.clicksToday ?? response.clicksToday ?? response.clicks_today ?? 0,
+      clicks_this_week: response.summary?.clicksThisWeek ?? response.clicksThisWeek ?? response.clicks_this_week ?? 0,
+      clicks_this_month: response.summary?.clicksThisMonth ?? response.clicksThisMonth ?? response.clicks_this_month ?? 0,
+      top_referrers: (response.referrers || response.summary?.topReferrers || response.top_referrers || []),
+      top_countries: (response.countries || response.summary?.topCountries || response.top_countries || []),
+      device_breakdown: (response.devices || response.summary?.deviceBreakdown || response.device_breakdown || []),
+      clicks_over_time: (response.last7Days || response.summary?.clicksOverTime || response.clicks_over_time || [])
+        .map((d: any) => ({ date: d.date, count: d.clicks ?? d.count ?? 0 })),
+      recent_clicks: (response.recentEvents || response.recent_clicks || [])
+        .map((e: any) => ({
+          event_id: e.eventId || e.event_id || '',
+          timestamp: e.timestamp,
+          referrer: e.referrer,
+          country: e.country,
+          device: e.device,
+        })),
+    };
   }
 
   async getDashboardStats(): Promise<{
