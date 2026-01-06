@@ -1,4 +1,4 @@
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { 
   LayoutDashboard, 
@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import Logo from "@/components/Logo";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
+import { useAuth } from "@/contexts/AuthContext";
 
 const sidebarLinks = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
@@ -24,7 +25,14 @@ const sidebarLinks = [
 
 const DashboardSidebar = () => {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { signOut } = useAuth();
   const [collapsed, setCollapsed] = useState(false);
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate("/");
+  };
 
   return (
     <motion.aside
@@ -107,6 +115,7 @@ const DashboardSidebar = () => {
       {/* Footer */}
       <div className="p-3 border-t border-sidebar-border">
         <button
+          onClick={handleSignOut}
           className={cn(
             "flex items-center gap-3 px-3 py-2.5 rounded-lg w-full text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground transition-colors"
           )}

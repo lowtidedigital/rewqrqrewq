@@ -1,53 +1,139 @@
 import { motion } from "framer-motion";
-import { Link, useSearchParams, useNavigate } from "react-router-dom";
-import { useState } from "react";
+import { Link, useSearchParams, useNavigate, useLocation } from "react-router-dom";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import Logo from "@/components/Logo";
-import { Anchor, Mail, Lock, User, ArrowLeft, AlertCircle, Eye, EyeOff } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { Anchor, Mail, Lock, User, ArrowLeft, AlertCircle, Eye, EyeOff, CheckCircle } from "lucide-react";
+
+type AuthMode = "signin" | "signup" | "reset" | "confirm" | "reset-confirm";
 
 const Auth = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const [mode, setMode] = useState<"signin" | "signup" | "reset">(
+  const location = useLocation();
+  const { signIn, signUp, confirmSignUp, forgotPassword, confirmForgotPassword, resendConfirmationCode, isAuthenticated, isLoading: authLoading } = useAuth();
+  
+  const [mode, setMode] = useState<AuthMode>(
     searchParams.get("mode") === "signup" ? "signup" : "signin"
   );
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
+  const [pendingEmail, setPendingEmail] = useState<string>("");
 
   const [formData, setFormData] = useState({
     email: "",
     password: "",
     name: "",
+    code: "",
+    newPassword: "",
   });
+
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (isAuthenticated && !authLoading) {
+      const from = (location.state as any)?.from?.pathname || "/dashboard";
+      navigate(from, { replace: true });
+    }
+  }, [isAuthenticated, authLoading, navigate, location]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    setSuccess(null);
     setIsLoading(true);
 
-    // Basic validation
-    if (!formData.email || !formData.password) {
-      setError("Please fill in all fields");
+    try {
+      switch (mode) {
+        case "signin": {
+          if (!formData.email || !formData.password) {
+            throw { message: "Please fill in all fields" };
+          }
+          await signIn(formData.email, formData.password);
+          // Navigation happens via useEffect
+          break;
+        }
+        case "signup": {
+          if (!formData.email || !formData.password || !formData.name) {
+            throw { message: "Please fill in all fields" };
+          }
+          if (formData.password.length < 8) {
+            throw { message: "Password must be at least 8 characters" };
+          }
+          const result = await signUp(formData.email, formData.password, formData.name);
+          if (result.requiresConfirmation) {
+            setPendingEmail(formData.email);
+            setMode("confirm");
+            setSuccess("Check your email for a verification code");
+          }
+          break;
+        }
+        case "confirm": {
+          if (!formData.code) {
+            throw { message: "Please enter the verification code" };
+          }
+          await confirmSignUp(pendingEmail || formData.email, formData.code);
+          setSuccess("Email verified! You can now sign in.");
+          setMode("signin");
+          setFormData({ ...formData, code: "" });
+          break;
+        }
+        case "reset": {
+          if (!formData.email) {
+            throw { message: "Please enter your email" };
+          }
+          await forgotPassword(formData.email);
+          setPendingEmail(formData.email);
+          setMode("reset-confirm");
+          setSuccess("Check your email for a reset code");
+          break;
+        }
+        case "reset-confirm": {
+          if (!formData.code || !formData.newPassword) {
+            throw { message: "Please fill in all fields" };
+          }
+          if (formData.newPassword.length < 8) {
+            throw { message: "Password must be at least 8 characters" };
+          }
+          await confirmForgotPassword(pendingEmail, formData.code, formData.newPassword);
+          setSuccess("Password reset! You can now sign in.");
+          setMode("signin");
+          setFormData({ ...formData, code: "", newPassword: "" });
+          break;
+        }
+      }
+    } catch (err: any) {
+      setError(err.message || "An error occurred");
+    } finally {
       setIsLoading(false);
-      return;
     }
-
-    if (mode === "signup" && !formData.name) {
-      setError("Please enter your name");
-      setIsLoading(false);
-      return;
-    }
-
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-
-    // For demo, just redirect to dashboard
-    setIsLoading(false);
-    navigate("/dashboard");
   };
+
+  const handleResendCode = async () => {
+    setError(null);
+    setIsLoading(true);
+    try {
+      await resendConfirmationCode(pendingEmail || formData.email);
+      setSuccess("Verification code sent!");
+    } catch (err: any) {
+      setError(err.message || "Failed to resend code");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Don't render form if already authenticated
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="w-12 h-12 border-4 border-primary/30 border-t-primary rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background flex">
@@ -134,13 +220,29 @@ const Auth = () => {
               {mode === "signin" && "Welcome back"}
               {mode === "signup" && "Create your account"}
               {mode === "reset" && "Reset password"}
+              {mode === "confirm" && "Verify your email"}
+              {mode === "reset-confirm" && "Set new password"}
             </h2>
             <p className="text-muted-foreground">
               {mode === "signin" && "Sign in to your Link Harbour account"}
               {mode === "signup" && "Start shortening links in seconds"}
-              {mode === "reset" && "We'll send you a reset link"}
+              {mode === "reset" && "We'll send you a reset code"}
+              {mode === "confirm" && `Enter the code sent to ${pendingEmail}`}
+              {mode === "reset-confirm" && "Enter the code and your new password"}
             </p>
           </div>
+
+          {/* Success Message */}
+          {success && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="flex items-center gap-2 p-3 rounded-lg bg-green-500/10 border border-green-500/30 text-green-500 text-sm mb-4"
+            >
+              <CheckCircle className="w-4 h-4 flex-shrink-0" />
+              {success}
+            </motion.div>
+          )}
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-5">
@@ -161,22 +263,39 @@ const Auth = () => {
               </div>
             )}
 
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+            {(mode === "signin" || mode === "signup" || mode === "reset") && (
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="john@example.com"
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    className="pl-11 h-12"
+                  />
+                </div>
+              </div>
+            )}
+
+            {(mode === "confirm" || mode === "reset-confirm") && (
+              <div className="space-y-2">
+                <Label htmlFor="code">Verification Code</Label>
                 <Input
-                  id="email"
-                  type="email"
-                  placeholder="john@example.com"
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className="pl-11 h-12"
+                  id="code"
+                  type="text"
+                  placeholder="Enter 6-digit code"
+                  value={formData.code}
+                  onChange={(e) => setFormData({ ...formData, code: e.target.value })}
+                  className="h-12 text-center text-2xl tracking-widest"
+                  maxLength={6}
                 />
               </div>
-            </div>
+            )}
 
-            {mode !== "reset" && (
+            {(mode === "signin" || mode === "signup") && (
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <Label htmlFor="password">Password</Label>
@@ -198,6 +317,35 @@ const Auth = () => {
                     placeholder="••••••••"
                     value={formData.password}
                     onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                    className="pl-11 pr-11 h-12"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  >
+                    {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  </button>
+                </div>
+                {mode === "signup" && (
+                  <p className="text-xs text-muted-foreground">
+                    Must be at least 8 characters with uppercase, lowercase, and numbers
+                  </p>
+                )}
+              </div>
+            )}
+
+            {mode === "reset-confirm" && (
+              <div className="space-y-2">
+                <Label htmlFor="newPassword">New Password</Label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                  <Input
+                    id="newPassword"
+                    type={showPassword ? "text" : "password"}
+                    placeholder="••••••••"
+                    value={formData.newPassword}
+                    onChange={(e) => setFormData({ ...formData, newPassword: e.target.value })}
                     className="pl-11 pr-11 h-12"
                   />
                   <button
@@ -242,39 +390,55 @@ const Auth = () => {
                 <>
                   {mode === "signin" && "Sign In"}
                   {mode === "signup" && "Create Account"}
-                  {mode === "reset" && "Send Reset Link"}
+                  {mode === "reset" && "Send Reset Code"}
+                  {mode === "confirm" && "Verify Email"}
+                  {mode === "reset-confirm" && "Reset Password"}
                 </>
               )}
             </Button>
+
+            {mode === "confirm" && (
+              <Button
+                type="button"
+                variant="ghost"
+                className="w-full"
+                onClick={handleResendCode}
+                disabled={isLoading}
+              >
+                Resend verification code
+              </Button>
+            )}
           </form>
 
           {/* Toggle Mode */}
           <p className="text-center mt-6 text-muted-foreground">
-            {mode === "signin" ? (
+            {mode === "signin" && (
               <>
                 Don't have an account?{" "}
                 <button
-                  onClick={() => setMode("signup")}
+                  onClick={() => { setMode("signup"); setError(null); setSuccess(null); }}
                   className="text-primary hover:underline font-medium"
                 >
                   Sign up
                 </button>
               </>
-            ) : mode === "signup" ? (
+            )}
+            {mode === "signup" && (
               <>
                 Already have an account?{" "}
                 <button
-                  onClick={() => setMode("signin")}
+                  onClick={() => { setMode("signin"); setError(null); setSuccess(null); }}
                   className="text-primary hover:underline font-medium"
                 >
                   Sign in
                 </button>
               </>
-            ) : (
+            )}
+            {(mode === "reset" || mode === "confirm" || mode === "reset-confirm") && (
               <>
                 Remember your password?{" "}
                 <button
-                  onClick={() => setMode("signin")}
+                  onClick={() => { setMode("signin"); setError(null); setSuccess(null); }}
                   className="text-primary hover:underline font-medium"
                 >
                   Sign in
