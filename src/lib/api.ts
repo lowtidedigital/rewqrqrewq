@@ -1,9 +1,9 @@
 import { config } from '@/config';
 import { getAccessToken } from '@/lib/cognito';
 
-// Types matching backend
+// Types matching backend (uses camelCase)
 export interface Link {
-  link_id: string;
+  link_id: string;         // Frontend uses snake_case for response mapping
   owner_user_id: string;
   slug: string;
   long_url: string;
@@ -24,27 +24,29 @@ export interface Link {
   click_count?: number;
 }
 
+// Backend expects camelCase for requests
 export interface CreateLinkInput {
-  long_url: string;
-  custom_slug?: string;
+  longUrl: string;        // camelCase - matches backend CreateLinkRequest
+  customSlug?: string;
   title?: string;
   tags?: string[];
   notes?: string;
-  expires_at?: string;
-  redirect_type?: 301 | 302;
-  privacy_mode?: boolean;
+  expiresAt?: string;     // ISO date string
+  redirectType?: 301 | 302;
+  privacyMode?: boolean;
+  enabled?: boolean;
 }
 
 export interface UpdateLinkInput {
-  long_url?: string;
+  longUrl?: string;
   slug?: string;
   title?: string;
   tags?: string[];
   notes?: string;
   enabled?: boolean;
-  expires_at?: string | null;
-  redirect_type?: 301 | 302;
-  privacy_mode?: boolean;
+  expiresAt?: string | null;
+  redirectType?: 301 | 302;
+  privacyMode?: boolean;
 }
 
 export interface AnalyticsSummary {
@@ -78,6 +80,32 @@ export interface ApiError {
   message: string;
   code?: string;
   status: number;
+}
+
+// Helper to convert backend response (camelCase) to frontend format (snake_case)
+// Backend returns camelCase, but we store snake_case for consistency in frontend
+function transformLinkResponse(backendLink: any): Link {
+  return {
+    link_id: backendLink.id || backendLink.link_id,
+    owner_user_id: backendLink.userId || backendLink.owner_user_id,
+    slug: backendLink.slug,
+    long_url: backendLink.longUrl || backendLink.long_url,
+    title: backendLink.title,
+    tags: backendLink.tags,
+    notes: backendLink.notes,
+    enabled: backendLink.enabled,
+    expires_at: backendLink.expiresAt || backendLink.expires_at,
+    redirect_type: backendLink.redirectType || backendLink.redirect_type,
+    privacy_mode: backendLink.privacyMode ?? backendLink.privacy_mode ?? false,
+    qr_png_key: backendLink.qrPngKey || backendLink.qr_png_key,
+    qr_svg_key: backendLink.qrSvgKey || backendLink.qr_svg_key,
+    qr_png_url: backendLink.qrPngUrl || backendLink.qr_png_url,
+    qr_svg_url: backendLink.qrSvgUrl || backendLink.qr_svg_url,
+    qr_updated_at: backendLink.qrUpdatedAt || backendLink.qr_updated_at,
+    created_at: backendLink.createdAt ? new Date(backendLink.createdAt).toISOString() : backendLink.created_at,
+    updated_at: backendLink.updatedAt ? new Date(backendLink.updatedAt).toISOString() : backendLink.updated_at,
+    click_count: backendLink.clickCount ?? backendLink.click_count ?? 0,
+  };
 }
 
 // API client with automatic token attachment
@@ -136,7 +164,9 @@ class ApiClient {
 
   // Links CRUD
   async createLink(input: CreateLinkInput): Promise<Link> {
-    return this.request<Link>('POST', '/links', input);
+    // Send camelCase to backend, transform response to snake_case
+    const response = await this.request<any>('POST', '/links', input);
+    return transformLinkResponse(response);
   }
 
   async getLinks(params?: {
@@ -152,18 +182,26 @@ class ApiClient {
     if (params?.tag) searchParams.set('tag', params.tag);
 
     const query = searchParams.toString();
-    return this.request<PaginatedResponse<Link>>(
+    const response = await this.request<any>(
       'GET',
       `/links${query ? `?${query}` : ''}`
     );
+    
+    return {
+      items: (response.items || []).map(transformLinkResponse),
+      next_cursor: response.nextToken,
+      total_count: response.total,
+    };
   }
 
   async getLink(linkId: string): Promise<Link> {
-    return this.request<Link>('GET', `/links/${linkId}`);
+    const response = await this.request<any>('GET', `/links/${linkId}`);
+    return transformLinkResponse(response);
   }
 
   async updateLink(linkId: string, input: UpdateLinkInput): Promise<Link> {
-    return this.request<Link>('PUT', `/links/${linkId}`, input);
+    const response = await this.request<any>('PUT', `/links/${linkId}`, input);
+    return transformLinkResponse(response);
   }
 
   async deleteLink(linkId: string): Promise<void> {
@@ -194,12 +232,24 @@ class ApiClient {
     clicks_this_week: number;
     top_links: Link[];
   }> {
-    return this.request('GET', '/analytics/dashboard');
+    const response = await this.request<any>('GET', '/analytics/dashboard');
+    return {
+      total_links: response.totalLinks ?? response.total_links ?? 0,
+      total_clicks: response.totalClicks ?? response.total_clicks ?? 0,
+      active_links: response.activeLinks ?? response.active_links ?? 0,
+      clicks_today: response.clicksToday ?? response.clicks_today ?? 0,
+      clicks_this_week: response.clicksThisWeek ?? response.clicks_this_week ?? 0,
+      top_links: (response.topLinks || response.top_links || []).map(transformLinkResponse),
+    };
   }
 
   // QR Code URLs (presigned)
   async getQrUrls(linkId: string): Promise<{ png_url: string; svg_url: string }> {
-    return this.request('GET', `/links/${linkId}/qr`);
+    const response = await this.request<any>('GET', `/links/${linkId}/qr`);
+    return {
+      png_url: response.pngUrl || response.png_url,
+      svg_url: response.svgUrl || response.svg_url,
+    };
   }
 }
 

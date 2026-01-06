@@ -128,14 +128,16 @@ const CreateLinkForm = ({ onSuccess }: CreateLinkFormProps) => {
       return;
     }
 
+    // Build input with camelCase field names (matches backend CreateLinkRequest)
     const input: CreateLinkInput = {
-      long_url: formData.longUrl,
-      custom_slug: formData.customSlug || undefined,
+      longUrl: formData.longUrl,                    // camelCase for backend
+      customSlug: formData.customSlug || undefined,
       title: formData.title || undefined,
       tags: formData.tags.length > 0 ? formData.tags : undefined,
       notes: formData.notes || undefined,
-      expires_at: formData.expiresAt ? new Date(formData.expiresAt).toISOString() : undefined,
-      redirect_type: parseInt(formData.redirectType) as 301 | 302,
+      expiresAt: formData.expiresAt ? new Date(formData.expiresAt).toISOString() : undefined,
+      redirectType: parseInt(formData.redirectType) as 301 | 302,
+      enabled: formData.enabled,
     };
 
     createMutation.mutate(input);
