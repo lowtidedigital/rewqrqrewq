@@ -120,39 +120,33 @@ const DashboardSidebar = () => {
         animate={{ x: 0, opacity: 1 }}
         transition={{ duration: 0.3 }}
         className={cn(
-          "hidden md:flex flex-col bg-sidebar border-r border-sidebar-border h-screen sticky top-0 transition-all duration-200 overflow-hidden",
-          collapsed ? "w-[72px]" : "w-[260px]"
+          "hidden md:flex flex-col bg-sidebar border-r border-sidebar-border h-screen sticky top-0 transition-all duration-300 ease-in-out overflow-hidden",
+          collapsed ? "w-[68px]" : "w-[260px]"
         )}
       >
         {/* Brand Header */}
         <div className="border-b border-sidebar-border/50 bg-sidebar-accent/30">
-          <div className="flex items-center justify-between p-3">
-            <BrandLogo 
-              variant={collapsed ? "collapsed" : "sidebar"} 
-              linkTo="/dashboard"
-              className={cn(collapsed && "mx-auto")}
-            />
+          <div className={cn(
+            "flex items-center p-3 min-h-[64px]",
+            collapsed ? "justify-center" : "justify-between"
+          )}>
             {!collapsed && (
-              <button
-                onClick={() => setCollapsed(true)}
-                className="p-2 rounded-md hover:bg-sidebar-accent text-sidebar-foreground/50 hover:text-sidebar-foreground transition-colors"
-                aria-label="Collapse sidebar"
-              >
-                <ChevronLeft className="w-4 h-4" />
-              </button>
+              <BrandLogo 
+                variant="sidebar" 
+                linkTo="/dashboard"
+              />
             )}
+            <button
+              onClick={() => setCollapsed(!collapsed)}
+              className={cn(
+                "p-2 rounded-md hover:bg-sidebar-accent text-sidebar-foreground/50 hover:text-sidebar-foreground transition-colors",
+                collapsed && "mx-auto"
+              )}
+              aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+            >
+              {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
+            </button>
           </div>
-          {collapsed && (
-            <div className="flex justify-center pb-3">
-              <button
-                onClick={() => setCollapsed(false)}
-                className="p-2 rounded-md hover:bg-sidebar-accent text-sidebar-foreground/50 hover:text-sidebar-foreground transition-colors"
-                aria-label="Expand sidebar"
-              >
-                <ChevronRight className="w-4 h-4" />
-              </button>
-            </div>
-          )}
         </div>
 
         <Separator className="bg-sidebar-border/30" />
