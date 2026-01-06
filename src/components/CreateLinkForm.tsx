@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -25,6 +26,7 @@ import {
   Check
 } from "lucide-react";
 import { config, buildShortUrl } from "@/config";
+import { api, CreateLinkInput } from "@/lib/api";
 
 interface CreateLinkFormProps {
   onSuccess?: (link: any) => void;
@@ -32,9 +34,9 @@ interface CreateLinkFormProps {
 
 const CreateLinkForm = ({ onSuccess }: CreateLinkFormProps) => {
   const navigate = useNavigate();
-  const [isLoading, setIsLoading] = useState(false);
+  const queryClient = useQueryClient();
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState(false);
+  const [createdSlug, setCreatedSlug] = useState<string | null>(null);
   
   const [formData, setFormData] = useState({
     longUrl: "",
@@ -43,16 +45,38 @@ const CreateLinkForm = ({ onSuccess }: CreateLinkFormProps) => {
     tags: [] as string[],
     notes: "",
     expiresAt: "",
-    redirectType: "302",
+    redirectType: "302" as "301" | "302",
     enabled: true,
   });
   
   const [tagInput, setTagInput] = useState("");
 
+  const createMutation = useMutation({
+    mutationFn: (input: CreateLinkInput) => api.createLink(input),
+    onSuccess: (link) => {
+      // Invalidate queries to refresh data
+      queryClient.invalidateQueries({ queryKey: ['links'] });
+      queryClient.invalidateQueries({ queryKey: ['recentLinks'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboardStats'] });
+      
+      setCreatedSlug(link.slug);
+      
+      if (onSuccess) {
+        onSuccess(link);
+      }
+
+      setTimeout(() => {
+        navigate("/dashboard/links");
+      }, 1500);
+    },
+    onError: (err: any) => {
+      setError(err.message || "Failed to create link. Please try again.");
+    },
+  });
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    setIsLoading(true);
 
     // Validate URL
     try {
@@ -62,43 +86,20 @@ const CreateLinkForm = ({ onSuccess }: CreateLinkFormProps) => {
       }
     } catch {
       setError("Please enter a valid HTTP or HTTPS URL");
-      setIsLoading(false);
       return;
     }
 
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-
-    const slug = formData.customSlug || generateSlug();
-    const newLink = {
-      id: crypto.randomUUID(),
-      slug: slug,
-      shortUrl: buildShortUrl(slug),
-      longUrl: formData.longUrl,
+    const input: CreateLinkInput = {
+      long_url: formData.longUrl,
+      custom_slug: formData.customSlug || undefined,
       title: formData.title || undefined,
-      tags: formData.tags,
-      notes: formData.notes,
-      expiresAt: formData.expiresAt || undefined,
-      redirectType: formData.redirectType,
-      enabled: formData.enabled,
-      clicks: 0,
-      createdAt: new Date().toISOString(),
+      tags: formData.tags.length > 0 ? formData.tags : undefined,
+      notes: formData.notes || undefined,
+      expires_at: formData.expiresAt ? new Date(formData.expiresAt).toISOString() : undefined,
+      redirect_type: parseInt(formData.redirectType) as 301 | 302,
     };
 
-    setSuccess(true);
-    setIsLoading(false);
-    
-    if (onSuccess) {
-      onSuccess(newLink);
-    }
-
-    setTimeout(() => {
-      navigate("/dashboard/links");
-    }, 1500);
-  };
-
-  const generateSlug = () => {
-    return Math.random().toString(36).substring(2, 8);
+    createMutation.mutate(input);
   };
 
   const handleAddTag = (e: React.KeyboardEvent) => {
@@ -121,7 +122,7 @@ const CreateLinkForm = ({ onSuccess }: CreateLinkFormProps) => {
     });
   };
 
-  if (success) {
+  if (createdSlug) {
     return (
       <motion.div
         initial={{ scale: 0.9, opacity: 0 }}
@@ -135,7 +136,7 @@ const CreateLinkForm = ({ onSuccess }: CreateLinkFormProps) => {
         <p className="text-muted-foreground mb-4">Your short link is ready to use</p>
         <div className="p-4 rounded-xl bg-secondary/50 border border-border">
           <code className="text-primary font-mono">
-            {buildShortUrl(formData.customSlug || "abc123")}
+            {buildShortUrl(createdSlug)}
           </code>
         </div>
       </motion.div>
@@ -253,7 +254,7 @@ const CreateLinkForm = ({ onSuccess }: CreateLinkFormProps) => {
           </Label>
           <Select
             value={formData.redirectType}
-            onValueChange={(value) => setFormData({ ...formData, redirectType: value })}
+            onValueChange={(value: "301" | "302") => setFormData({ ...formData, redirectType: value })}
           >
             <SelectTrigger id="redirectType">
               <SelectValue />
@@ -310,9 +311,9 @@ const CreateLinkForm = ({ onSuccess }: CreateLinkFormProps) => {
         variant="hero"
         size="lg"
         className="w-full"
-        disabled={isLoading || !formData.longUrl}
+        disabled={createMutation.isPending || !formData.longUrl}
       >
-        {isLoading ? "Creating..." : "Create Short Link"}
+        {createMutation.isPending ? "Creating..." : "Create Short Link"}
       </Button>
     </motion.form>
   );
