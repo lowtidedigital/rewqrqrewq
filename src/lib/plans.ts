@@ -1,12 +1,14 @@
 // Plan configuration - Single source of truth for all plan limits and features
 // These MUST match the backend enforcement in Lambda handlers
+// 3-tier model: Free, Starter ($12/mo), Enterprise
 
-export type PlanName = 'free' | 'starter' | 'pro' | 'business' | 'enterprise';
+export type PlanName = 'free' | 'starter' | 'enterprise';
 
 export interface PlanConfig {
   name: PlanName;
   displayName: string;
   price: number; // Monthly price in USD (0 for free, -1 for custom)
+  stripePriceId?: string; // Stripe price ID for checkout
   maxLinksTotal: number;
   trackedClicksMonthly: number;
   retentionDays: number;
@@ -36,60 +38,22 @@ export const PLANS: Record<PlanName, PlanConfig> = {
   starter: {
     name: 'starter',
     displayName: 'Starter',
-    price: 9,
-    maxLinksTotal: 250,
-    trackedClicksMonthly: 10_000,
-    retentionDays: 30,
-    apiAccess: false, // IMPORTANT: Starter does NOT get API access
-    customDomains: 1,
+    price: 12,
+    stripePriceId: 'price_1SmQWQRd9hGS6kHhuXA5XkpL',
+    maxLinksTotal: 500,
+    trackedClicksMonthly: 25_000,
+    retentionDays: 90,
+    apiAccess: true, // Starter gets API access
+    customDomains: 3,
     features: [
-      '250 short links',
-      '10,000 tracked clicks/month',
-      '30-day analytics retention',
+      '500 short links',
+      '25,000 tracked clicks/month',
+      '90-day analytics retention',
       'QR codes (PNG + SVG)',
       'Custom slugs',
-      '1 custom domain',
-      'Priority email support',
-    ],
-  },
-  pro: {
-    name: 'pro',
-    displayName: 'Pro',
-    price: 25,
-    maxLinksTotal: 2_000,
-    trackedClicksMonthly: 100_000,
-    retentionDays: 365,
-    apiAccess: true, // Pro unlocks API access
-    customDomains: 5,
-    features: [
-      '2,000 short links',
-      '100,000 tracked clicks/month',
-      '1-year analytics retention',
-      'QR codes (PNG + SVG)',
-      'Custom slugs & link expiration',
-      '5 custom domains',
+      '3 custom domains',
       'API access',
-      'Priority support',
-    ],
-  },
-  business: {
-    name: 'business',
-    displayName: 'Business',
-    price: 75,
-    maxLinksTotal: 10_000,
-    trackedClicksMonthly: 500_000,
-    retentionDays: 730, // 2 years
-    apiAccess: true,
-    customDomains: 20,
-    features: [
-      '10,000 short links',
-      '500,000 tracked clicks/month',
-      '2-year analytics retention',
-      'All Pro features',
-      '20 custom domains',
-      'Team management',
-      'Dedicated account manager',
-      'SSO/SAML (coming soon)',
+      'Priority email support',
     ],
   },
   enterprise: {
@@ -105,11 +69,13 @@ export const PLANS: Record<PlanName, PlanConfig> = {
       'Unlimited links',
       'Unlimited tracked clicks',
       'Unlimited retention',
-      'All Business features',
+      'All Starter features',
       'Unlimited custom domains',
       'Custom integrations',
       'SLA guarantee',
       'Dedicated infrastructure',
+      'SSO/SAML',
+      'Dedicated account manager',
     ],
   },
 };
@@ -122,6 +88,11 @@ export const getPlan = (planName: PlanName): PlanConfig => {
 // Check if a plan has API access
 export const hasApiAccess = (planName: PlanName): boolean => {
   return PLANS[planName]?.apiAccess ?? false;
+};
+
+// Check if user is on a paid plan
+export const isPaidPlan = (planName: PlanName): boolean => {
+  return planName === 'starter' || planName === 'enterprise';
 };
 
 // Check if user can create more links
