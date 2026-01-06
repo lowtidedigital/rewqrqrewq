@@ -2,8 +2,22 @@ import { motion } from "framer-motion";
 import { Bell, Search, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useAuth } from "@/contexts/AuthContext";
 
 const DashboardHeader = () => {
+  const { user } = useAuth();
+  
+  // Get display name - use name if available, otherwise first part of email
+  const displayName = user?.name || user?.email?.split('@')[0] || "User";
+  
+  // Get initials for avatar
+  const initials = displayName
+    .split(' ')
+    .map(n => n[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2);
+
   return (
     <motion.header
       initial={{ y: -10, opacity: 0 }}
@@ -26,16 +40,15 @@ const DashboardHeader = () => {
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="icon" className="relative">
             <Bell className="w-5 h-5" />
-            <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-primary rounded-full animate-pulse" />
           </Button>
           
           <div className="w-px h-6 bg-border" />
           
           <Button variant="ghost" className="gap-2">
             <div className="w-8 h-8 rounded-full gradient-primary flex items-center justify-center">
-              <User className="w-4 h-4 text-primary-foreground" />
+              <span className="text-xs font-bold text-primary-foreground">{initials}</span>
             </div>
-            <span className="hidden sm:inline text-sm font-medium">Demo User</span>
+            <span className="hidden sm:inline text-sm font-medium">{displayName}</span>
           </Button>
         </div>
       </div>

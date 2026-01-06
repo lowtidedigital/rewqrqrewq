@@ -42,28 +42,28 @@ const Dashboard = () => {
       title: "Total Links", 
       value: stats?.total_links?.toString() || "0", 
       change: `${stats?.active_links || 0} active`, 
-      changeType: "positive" as const, 
+      changeType: "neutral" as const, 
       icon: Link2 
     },
     { 
       title: "Total Clicks", 
       value: stats?.total_clicks?.toLocaleString() || "0", 
       change: `${stats?.clicks_this_week || 0} this week`, 
-      changeType: "positive" as const, 
+      changeType: "neutral" as const, 
       icon: MousePointerClick 
     },
     { 
       title: "Clicks Today", 
       value: stats?.clicks_today?.toString() || "0", 
-      change: "Today's activity", 
-      changeType: "positive" as const, 
+      change: "Last 24 hours", 
+      changeType: "neutral" as const, 
       icon: TrendingUp 
     },
     { 
       title: "This Week", 
       value: stats?.clicks_this_week?.toString() || "0", 
       change: "Last 7 days", 
-      changeType: "positive" as const, 
+      changeType: "neutral" as const, 
       icon: Globe 
     },
   ];
