@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
-import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useState, useEffect, useCallback } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -12,6 +12,8 @@ import {
   AlertCircle,
   Sparkles,
   Calendar,
+  RefreshCw,
+  CheckCircle2,
 } from "lucide-react";
 import { PLANS, PlanName, formatPrice } from "@/lib/plans";
 import { createCheckoutSession, createPortalSession } from "@/lib/billing";
@@ -19,6 +21,7 @@ import { useSubscription } from "@/contexts/SubscriptionContext";
 import { toast } from "sonner";
 
 const Billing = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
   const { 
     subscription, 
     currentPlan, 
@@ -30,12 +33,64 @@ const Billing = () => {
   
   const [isUpgrading, setIsUpgrading] = useState(false);
   const [isManaging, setIsManaging] = useState(false);
+  const [isPolling, setIsPolling] = useState(false);
+  const [pollAttempts, setPollAttempts] = useState(0);
+  const [showSuccessBanner, setShowSuccessBanner] = useState(false);
+
+  // Handle Stripe success redirect - poll for subscription activation
+  const pollForActivation = useCallback(async () => {
+    setIsPolling(true);
+    setPollAttempts(0);
+    setShowSuccessBanner(true);
+
+    const maxAttempts = 10; // 20 seconds total (2s intervals)
+    let attempts = 0;
+
+    const poll = async () => {
+      attempts++;
+      setPollAttempts(attempts);
+      
+      try {
+        await refresh();
+        
+        // Check if now active
+        const isNowActive = subscription?.status === 'active' || subscription?.status === 'trialing';
+        const isNowPaid = subscription?.plan === 'starter' || subscription?.plan === 'enterprise';
+        
+        if (isNowActive && isNowPaid) {
+          setIsPolling(false);
+          toast.success('Subscription activated! Welcome to Starter.');
+          // Clean up URL
+          setSearchParams({});
+          return;
+        }
+      } catch (e) {
+        console.error('Poll error:', e);
+      }
+
+      if (attempts < maxAttempts) {
+        setTimeout(poll, 2000);
+      } else {
+        setIsPolling(false);
+        // Keep banner but show manual refresh option
+      }
+    };
+
+    poll();
+  }, [refresh, subscription, setSearchParams]);
+
+  useEffect(() => {
+    const success = searchParams.get('success');
+    if (success === '1' && !isPolling && !showSuccessBanner) {
+      pollForActivation();
+    }
+  }, [searchParams, isPolling, showSuccessBanner, pollForActivation]);
 
   const handleUpgrade = async () => {
     setIsUpgrading(true);
     try {
-      const { checkoutUrl } = await createCheckoutSession('starter');
-      window.location.href = checkoutUrl;
+      const { url } = await createCheckoutSession('starter');
+      window.location.href = url;
     } catch (error: any) {
       console.error('Checkout error:', error);
       toast.error(error.message || "Failed to start upgrade process");
@@ -47,8 +102,8 @@ const Billing = () => {
   const handleManageBilling = async () => {
     setIsManaging(true);
     try {
-      const { portalUrl } = await createPortalSession();
-      window.location.href = portalUrl;
+      const { url } = await createPortalSession();
+      window.location.href = url;
     } catch (error: any) {
       console.error('Portal error:', error);
       toast.error(error.message || "Failed to open billing portal");
@@ -57,7 +112,16 @@ const Billing = () => {
     }
   };
 
-  if (subLoading) {
+  const handleManualRefresh = async () => {
+    try {
+      await refresh();
+      toast.success('Subscription status refreshed');
+    } catch {
+      toast.error('Failed to refresh status');
+    }
+  };
+
+  if (subLoading && !showSuccessBanner) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
@@ -68,8 +132,57 @@ const Billing = () => {
   const plan = PLANS[currentPlan];
   const isCanceling = subscription?.cancelAtPeriodEnd;
 
+  // Format renewal date from unix timestamp
+  const formatRenewalDate = (timestamp?: number) => {
+    if (!timestamp) return null;
+    // Handle both seconds and milliseconds
+    const ms = timestamp > 9999999999 ? timestamp : timestamp * 1000;
+    return new Date(ms).toLocaleDateString();
+  };
+
   return (
     <div className="max-w-5xl space-y-8">
+      {/* Success Banner - Stripe redirect */}
+      {showSuccessBanner && (
+        <motion.div
+          initial={{ y: -20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          className="rounded-xl border border-primary/30 bg-primary/5 p-4"
+        >
+          <div className="flex items-center gap-3">
+            {isPolling ? (
+              <>
+                <Loader2 className="w-5 h-5 text-primary animate-spin" />
+                <div>
+                  <p className="font-medium text-primary">Payment received — activating your subscription...</p>
+                  <p className="text-sm text-muted-foreground">This usually takes a few seconds.</p>
+                </div>
+              </>
+            ) : isActive && (currentPlan === 'starter' || currentPlan === 'enterprise') ? (
+              <>
+                <CheckCircle2 className="w-5 h-5 text-primary" />
+                <div>
+                  <p className="font-medium text-primary">Subscription activated!</p>
+                  <p className="text-sm text-muted-foreground">Welcome to {plan.displayName}. Enjoy your new features!</p>
+                </div>
+              </>
+            ) : (
+              <>
+                <AlertCircle className="w-5 h-5 text-amber-500" />
+                <div className="flex-1">
+                  <p className="font-medium">Still syncing — this can take up to a minute</p>
+                  <p className="text-sm text-muted-foreground">If it doesn't update, try refreshing.</p>
+                </div>
+                <Button variant="outline" size="sm" onClick={handleManualRefresh}>
+                  <RefreshCw className="w-4 h-4 mr-1" />
+                  Refresh
+                </Button>
+              </>
+            )}
+          </div>
+        </motion.div>
+      )}
+
       {/* Header */}
       <motion.div
         initial={{ y: -10, opacity: 0 }}
@@ -97,39 +210,42 @@ const Billing = () => {
           </div>
         </div>
 
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-4 rounded-lg bg-muted/30 border border-border/50">
-          <div>
-            <div className="flex items-center gap-2 mb-1">
-              <span className="text-2xl font-bold">{plan.displayName}</span>
-              <Badge variant={isActive ? 'default' : currentPlan === 'free' ? 'secondary' : 'destructive'}>
-                {isCanceling ? 'Canceling' : isActive ? 'Active' : currentPlan === 'free' ? 'Free' : subscription?.status || 'Inactive'}
-              </Badge>
+        <div className="flex flex-col gap-4 p-4 rounded-lg bg-muted/30 border border-border/50">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <div className="flex items-center gap-2 mb-1 flex-wrap">
+                <span className="text-2xl font-bold">{plan.displayName}</span>
+                <Badge variant={isActive ? 'default' : currentPlan === 'free' ? 'secondary' : 'destructive'}>
+                  {isCanceling ? 'Canceling' : isActive ? 'Active' : currentPlan === 'free' ? 'Free' : subscription?.status || 'Inactive'}
+                </Badge>
+              </div>
+              <p className="text-muted-foreground">
+                {formatPrice(plan)}{currentPlan !== 'free' && currentPlan !== 'enterprise' && '/month'}
+                {subscription?.currentPeriodEnd && (
+                  <span className="ml-2 inline-flex items-center gap-1">
+                    <Calendar className="w-3 h-3" />
+                    {isCanceling ? 'Ends' : 'Renews'} {formatRenewalDate(subscription.currentPeriodEnd)}
+                  </span>
+                )}
+              </p>
             </div>
-            <p className="text-muted-foreground">
-              {formatPrice(plan)}{currentPlan !== 'free' && currentPlan !== 'enterprise' && '/month'}
-              {subscription?.currentPeriodEnd && (
-                <span className="ml-2 inline-flex items-center gap-1">
-                  <Calendar className="w-3 h-3" />
-                  {isCanceling ? 'Ends' : 'Renews'} {new Date(subscription.currentPeriodEnd).toLocaleDateString()}
-                </span>
-              )}
-            </p>
+            
+            {currentPlan !== 'free' && (
+              <Button 
+                variant="outline" 
+                onClick={handleManageBilling}
+                disabled={isManaging}
+                className="w-full sm:w-auto"
+              >
+                {isManaging ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <ExternalLink className="w-4 h-4" />
+                )}
+                Manage Billing
+              </Button>
+            )}
           </div>
-          
-          {currentPlan !== 'free' && (
-            <Button 
-              variant="outline" 
-              onClick={handleManageBilling}
-              disabled={isManaging}
-            >
-              {isManaging ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <ExternalLink className="w-4 h-4" />
-              )}
-              Manage Billing
-            </Button>
-          )}
         </div>
 
         {/* Plan Limits */}
@@ -180,7 +296,7 @@ const Billing = () => {
           <div className="grid md:grid-cols-2 gap-6">
             {/* Starter Plan Card */}
             <div className="p-5 rounded-xl border border-primary bg-card">
-              <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
                 <h3 className="font-semibold text-lg">Starter</h3>
                 <Badge className="bg-primary text-primary-foreground">Recommended</Badge>
               </div>
@@ -239,7 +355,7 @@ const Billing = () => {
               </ul>
               
               <Button variant="outline" className="w-full" asChild>
-                <a href="mailto:sales@linkharbour.io">
+                <a href="mailto:sales@linkharbour.io?subject=Link%20Harbour%20Enterprise%20Inquiry">
                   Contact Sales
                   <ExternalLink className="w-4 h-4" />
                 </a>
@@ -263,7 +379,7 @@ const Billing = () => {
           transition={{ duration: 0.4, delay: 0.3 }}
           className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-6"
         >
-          <div className="flex items-start gap-4">
+          <div className="flex flex-col sm:flex-row items-start gap-4">
             <AlertCircle className="w-6 h-6 text-amber-500 flex-shrink-0" />
             <div>
               <h3 className="font-semibold mb-1">API Access Requires Starter or Enterprise</h3>
@@ -296,14 +412,14 @@ const Billing = () => {
           transition={{ duration: 0.4, delay: 0.2 }}
           className="rounded-xl border border-border bg-card p-6"
         >
-          <div className="flex items-start gap-4">
+          <div className="flex flex-col sm:flex-row items-start gap-4">
             <Check className="w-6 h-6 text-primary flex-shrink-0" />
             <div>
               <h3 className="font-semibold mb-1">You're on the Starter plan!</h3>
               <p className="text-sm text-muted-foreground mb-3">
                 You have full API access and all Starter features. Need more? Contact us for Enterprise pricing.
               </p>
-              <div className="flex gap-3">
+              <div className="flex flex-wrap gap-3">
                 <Button
                   variant="outline"
                   size="sm"
@@ -320,7 +436,7 @@ const Billing = () => {
                   )}
                 </Button>
                 <Button variant="ghost" size="sm" asChild>
-                  <a href="mailto:sales@linkharbour.io">
+                  <a href="mailto:sales@linkharbour.io?subject=Link%20Harbour%20Enterprise%20Inquiry">
                     Contact for Enterprise
                   </a>
                 </Button>

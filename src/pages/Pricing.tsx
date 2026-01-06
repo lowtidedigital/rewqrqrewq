@@ -1,24 +1,16 @@
 import { motion } from "framer-motion";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import Navbar from "@/components/Navbar";
 import BrandLogo from "@/components/BrandLogo";
-import { Check, Star, X } from "lucide-react";
+import { Check, Star, X, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { PLANS, formatPrice } from "@/lib/plans";
-
-const plans = [
-  {
-    ...PLANS.free,
-    cta: "Get Started",
-    popular: false,
-  },
-  {
-    ...PLANS.starter,
-    cta: "Start with Starter",
-    popular: true,
-  },
-];
+import { createCheckoutSession } from "@/lib/billing";
+import { useAuth } from "@/contexts/AuthContext";
+import { useSubscription } from "@/contexts/SubscriptionContext";
+import { toast } from "sonner";
 
 // Feature comparison for the table (3-tier)
 const featureComparison = [
@@ -37,6 +29,66 @@ const featureComparison = [
 ];
 
 const Pricing = () => {
+  const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
+  const { currentPlan, isActive } = useSubscription();
+  const [isUpgrading, setIsUpgrading] = useState(false);
+
+  const handleGetStarted = () => {
+    if (isAuthenticated) {
+      navigate('/dashboard');
+    } else {
+      navigate('/auth?mode=signup');
+    }
+  };
+
+  const handleUpgrade = async () => {
+    if (!isAuthenticated) {
+      navigate('/auth?mode=signup');
+      return;
+    }
+
+    // Already on starter or enterprise
+    if ((currentPlan === 'starter' || currentPlan === 'enterprise') && isActive) {
+      navigate('/dashboard/billing');
+      return;
+    }
+
+    setIsUpgrading(true);
+    try {
+      const { url } = await createCheckoutSession('starter');
+      window.location.href = url;
+    } catch (error: any) {
+      console.error('Checkout error:', error);
+      toast.error(error.message || "Failed to start upgrade process");
+    } finally {
+      setIsUpgrading(false);
+    }
+  };
+
+  const getStarterButtonText = () => {
+    if (!isAuthenticated) return 'Start with Starter';
+    if ((currentPlan === 'starter' || currentPlan === 'enterprise') && isActive) return 'Manage Plan';
+    return 'Upgrade to Starter';
+  };
+
+  const plans = [
+    {
+      ...PLANS.free,
+      cta: isAuthenticated ? "Current Plan" : "Get Started",
+      popular: false,
+      onClick: handleGetStarted,
+      isCurrentPlan: isAuthenticated && currentPlan === 'free',
+    },
+    {
+      ...PLANS.starter,
+      cta: getStarterButtonText(),
+      popular: true,
+      onClick: handleUpgrade,
+      isCurrentPlan: isAuthenticated && currentPlan === 'starter' && isActive,
+    },
+  ];
+
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
@@ -106,9 +158,19 @@ const Pricing = () => {
                   variant={plan.popular ? "hero" : "outline"}
                   size="lg"
                   className="w-full"
-                  asChild
+                  onClick={plan.onClick}
+                  disabled={plan.isCurrentPlan || (plan.popular && isUpgrading)}
                 >
-                  <Link to="/auth?mode=signup">{plan.cta}</Link>
+                  {plan.popular && isUpgrading ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : plan.isCurrentPlan ? (
+                    <>
+                      <Check className="w-4 h-4" />
+                      Current Plan
+                    </>
+                  ) : (
+                    plan.cta
+                  )}
                 </Button>
               </motion.div>
             ))}
@@ -128,7 +190,7 @@ const Pricing = () => {
                 Let's build a plan that fits your organization.
               </p>
               <Button variant="hero" size="lg" asChild>
-                <a href="mailto:sales@linkharbour.io">Contact Sales</a>
+                <a href="mailto:sales@linkharbour.io?subject=Link%20Harbour%20Enterprise%20Inquiry">Contact Sales</a>
               </Button>
             </div>
           </motion.div>
