@@ -8,3 +8,8 @@ export const config = {
   cognitoClientId: import.meta.env.VITE_COGNITO_CLIENT_ID || '64rars8ja9q3sbgc8a12ock8fk',
   shortDomain: import.meta.env.VITE_SHORT_DOMAIN || 'lh.linkharbour.io',
 };
+
+// Helper to build short URLs with correct format
+export const buildShortUrl = (slug: string): string => {
+  return `https://${config.shortDomain}/r/${slug}`;
+};
