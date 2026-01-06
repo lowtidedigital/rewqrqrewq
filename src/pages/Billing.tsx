@@ -1,8 +1,15 @@
 import { motion } from "framer-motion";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   CreditCard,
   ExternalLink,
@@ -14,23 +21,71 @@ import {
   Calendar,
   RefreshCw,
   CheckCircle2,
+  Bug,
+  X,
 } from "lucide-react";
-import { PLANS, PlanName, formatPrice } from "@/lib/plans";
-import { createCheckoutSession, createPortalSession } from "@/lib/billing";
+import { PLANS, PlanName, formatPrice, hasApiAccess } from "@/lib/plans";
+import { createCheckoutSession, createPortalSession, SubscriptionStatus } from "@/lib/billing";
 import { useSubscription } from "@/contexts/SubscriptionContext";
 import { toast } from "sonner";
+
+// Mock subscription states for testing
+const MOCK_STATES: Record<string, SubscriptionStatus> = {
+  free: { plan: 'free', status: 'none' },
+  starter_active: { 
+    plan: 'starter', 
+    status: 'active', 
+    stripeCustomerId: 'cus_mock123',
+    subscriptionId: 'sub_mock123',
+    currentPeriodEnd: Math.floor(Date.now() / 1000) + 30 * 24 * 60 * 60, // 30 days from now
+  },
+  starter_canceling: { 
+    plan: 'starter', 
+    status: 'active', 
+    stripeCustomerId: 'cus_mock123',
+    subscriptionId: 'sub_mock123',
+    currentPeriodEnd: Math.floor(Date.now() / 1000) + 15 * 24 * 60 * 60,
+    cancelAtPeriodEnd: true,
+  },
+  starter_past_due: { 
+    plan: 'starter', 
+    status: 'past_due',
+    stripeCustomerId: 'cus_mock123',
+    subscriptionId: 'sub_mock123',
+  },
+  enterprise: { 
+    plan: 'enterprise', 
+    status: 'active',
+    stripeCustomerId: 'cus_mock_ent',
+  },
+};
+
+const isDev = import.meta.env.DEV;
 
 const Billing = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const { 
-    subscription, 
-    currentPlan, 
+    subscription: realSubscription, 
+    currentPlan: realPlan, 
     isLoading: subLoading, 
-    isActive,
-    canAccessApi,
+    isActive: realIsActive,
+    canAccessApi: realCanAccessApi,
     refresh 
   } = useSubscription();
   
+  // Dev mode state
+  const [devMode, setDevMode] = useState(false);
+  const [mockState, setMockState] = useState<string>('free');
+
+  // Use mock or real values based on dev mode
+  const subscription = useMemo(() => 
+    devMode ? MOCK_STATES[mockState] : realSubscription,
+    [devMode, mockState, realSubscription]
+  );
+  const currentPlan: PlanName = subscription?.plan || 'free';
+  const isActive = subscription?.status === 'active' || subscription?.status === 'trialing';
+  const canAccessApi = hasApiAccess(currentPlan);
+
   const [isUpgrading, setIsUpgrading] = useState(false);
   const [isManaging, setIsManaging] = useState(false);
   const [isPolling, setIsPolling] = useState(false);
@@ -142,8 +197,57 @@ const Billing = () => {
 
   return (
     <div className="max-w-5xl space-y-8">
+      {/* Dev Mode Toggle - Only in development */}
+      {isDev && (
+        <motion.div
+          initial={{ y: -20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          className={`rounded-xl border p-4 ${devMode ? 'border-amber-500/50 bg-amber-500/10' : 'border-border bg-muted/30'}`}
+        >
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-2">
+              <Bug className="w-5 h-5 text-amber-500" />
+              <div>
+                <p className="font-medium text-sm">Dev Mode {devMode ? 'ON' : 'OFF'}</p>
+                <p className="text-xs text-muted-foreground">Test different subscription states</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              {devMode ? (
+                <>
+                  <Select value={mockState} onValueChange={setMockState}>
+                    <SelectTrigger className="w-full sm:w-[180px]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="free">Free Plan</SelectItem>
+                      <SelectItem value="starter_active">Starter (Active)</SelectItem>
+                      <SelectItem value="starter_canceling">Starter (Canceling)</SelectItem>
+                      <SelectItem value="starter_past_due">Starter (Past Due)</SelectItem>
+                      <SelectItem value="enterprise">Enterprise</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Button variant="ghost" size="sm" onClick={() => setDevMode(false)}>
+                    <X className="w-4 h-4" />
+                  </Button>
+                </>
+              ) : (
+                <Button variant="outline" size="sm" onClick={() => setDevMode(true)}>
+                  Enable Test Mode
+                </Button>
+              )}
+            </div>
+          </div>
+          {devMode && (
+            <p className="mt-2 text-xs text-amber-600 dark:text-amber-400">
+              ⚠️ Showing mock data. Checkout/portal buttons won't work in test mode.
+            </p>
+          )}
+        </motion.div>
+      )}
+
       {/* Success Banner - Stripe redirect */}
-      {showSuccessBanner && (
+      {showSuccessBanner && !devMode && (
         <motion.div
           initial={{ y: -20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
