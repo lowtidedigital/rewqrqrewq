@@ -230,4 +230,4 @@ See `ROADMAP.md` for detailed implementation phases:
 
 ---
 
-© 2025 LinkHarbour. Built with ❤️ on AWS.
+© 2025 LinkHarbour (Powered by Lowtide Digital)
