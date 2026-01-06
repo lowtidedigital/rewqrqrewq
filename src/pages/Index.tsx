@@ -2,6 +2,7 @@ import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import Navbar from "@/components/Navbar";
+import Logo from "@/components/Logo";
 import { 
   Anchor, 
   Link2, 
@@ -11,7 +12,8 @@ import {
   Globe,
   ArrowRight,
   Check,
-  Sparkles
+  Sparkles,
+  Code,
 } from "lucide-react";
 
 const features = [
@@ -41,9 +43,9 @@ const features = [
     description: "CloudFront edge locations worldwide ensure your links load instantly, no matter where your audience is.",
   },
   {
-    icon: Sparkles,
+    icon: Code,
     title: "Developer Friendly",
-    description: "RESTful API with TypeScript SDK. Integrate short links into your apps and workflows seamlessly.",
+    description: "RESTful API with full documentation. Integrate short links into your apps (Pro plan and above).",
   },
 ];
 
@@ -253,9 +255,7 @@ const Index = () => {
       <footer className="py-12 px-4 border-t border-border/50">
         <div className="container mx-auto">
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-            <div className="flex items-center gap-2">
-              <img src="/favicon.png" alt="Link Harbour" className="w-8 h-8" />
-            </div>
+            <Logo size="sm" showText={false} />
             <p className="text-muted-foreground text-sm">
               © 2025 Link Harbour. Built with ❤️ on AWS.
             </p>

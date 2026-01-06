@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
 import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -23,14 +24,20 @@ import {
   Save,
   Info,
   Loader2,
-  AlertCircle
+  Lock,
+  ExternalLink,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { changePassword, updateUserAttributes } from "@/lib/cognito";
 import { toast } from "sonner";
+import { PLANS, PlanName, hasApiAccess } from "@/lib/plans";
 
 const Settings = () => {
   const { user, refreshUser } = useAuth();
+  
+  // TODO: Get from real subscription API
+  const [currentPlan] = useState<PlanName>('free');
+  const canAccessApi = hasApiAccess(currentPlan);
   
   // Profile state - initialized from real user data
   const [profile, setProfile] = useState({
@@ -203,7 +210,7 @@ const Settings = () => {
         </div>
       </motion.div>
 
-      {/* API Key Section - Coming Soon */}
+      {/* API Access Section - Gated by Plan */}
       <motion.div
         initial={{ y: 20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
@@ -216,29 +223,78 @@ const Settings = () => {
           </div>
           <div className="flex items-center gap-2">
             <h2 className="font-display text-lg font-semibold">API Access</h2>
-            <Badge variant="secondary" className="text-xs">Coming Soon</Badge>
+            {canAccessApi ? (
+              <Badge variant="default" className="text-xs">Enabled</Badge>
+            ) : (
+              <Badge variant="secondary" className="text-xs">Pro+ Required</Badge>
+            )}
           </div>
         </div>
 
-        <div className="bg-muted/50 rounded-lg p-4 border border-border/50">
-          <div className="flex items-start gap-3">
-            <Info className="w-5 h-5 text-muted-foreground mt-0.5" />
-            <div>
-              <p className="text-sm text-foreground font-medium">Personal API tokens coming soon</p>
-              <p className="text-sm text-muted-foreground mt-1">
-                We're adding personal API tokens for programmatic access. For now, the API uses Cognito authentication.
-              </p>
-              <a 
-                href="https://docs.linkharbour.io/api" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="text-sm text-primary hover:underline mt-2 inline-block"
-              >
-                View API Documentation →
-              </a>
+        {canAccessApi ? (
+          // Pro+ users see API info
+          <div className="space-y-4">
+            <div className="bg-muted/50 rounded-lg p-4 border border-border/50">
+              <div className="flex items-start gap-3">
+                <Info className="w-5 h-5 text-primary mt-0.5" />
+                <div>
+                  <p className="text-sm text-foreground font-medium">API Access Enabled</p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Your {PLANS[currentPlan].displayName} plan includes programmatic API access. 
+                    Personal API tokens are coming soon—for now, use Cognito authentication.
+                  </p>
+                  <a 
+                    href="https://docs.linkharbour.io/api" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-sm text-primary hover:underline mt-2 inline-flex items-center gap-1"
+                  >
+                    View API Documentation
+                    <ExternalLink className="w-3 h-3" />
+                  </a>
+                </div>
+              </div>
+            </div>
+            
+            <p className="text-xs text-muted-foreground flex items-center gap-1">
+              <Info className="w-3 h-3" />
+              Personal API tokens coming soon. Check the roadmap for updates.
+            </p>
+          </div>
+        ) : (
+          // Free/Starter users see upgrade prompt
+          <div className="bg-amber-500/5 rounded-lg p-4 border border-amber-500/20">
+            <div className="flex items-start gap-3">
+              <Lock className="w-5 h-5 text-amber-500 mt-0.5" />
+              <div>
+                <p className="text-sm text-foreground font-medium">API Access Requires Pro or Business</p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Programmatic API access is available on Pro ($25/mo) and Business ($75/mo) plans.
+                  {currentPlan === 'starter' && (
+                    <span className="block mt-1 text-amber-600">
+                      Note: Starter plan does not include API access.
+                    </span>
+                  )}
+                </p>
+                <div className="mt-3 flex items-center gap-3">
+                  <Button variant="hero" size="sm" asChild>
+                    <Link to="/dashboard/billing">
+                      Upgrade to Pro
+                    </Link>
+                  </Button>
+                  <a 
+                    href="https://docs.linkharbour.io/api" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-sm text-muted-foreground hover:text-foreground"
+                  >
+                    Learn more about API →
+                  </a>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
+        )}
       </motion.div>
 
       {/* Notifications Section */}

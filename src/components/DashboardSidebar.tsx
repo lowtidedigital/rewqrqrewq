@@ -16,10 +16,13 @@ import { cn } from "@/lib/utils";
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 
+import { CreditCard } from "lucide-react";
+
 const sidebarLinks = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
   { icon: Link2, label: "Links", path: "/dashboard/links" },
   { icon: BarChart3, label: "Analytics", path: "/dashboard/analytics" },
+  { icon: CreditCard, label: "Billing", path: "/dashboard/billing" },
   { icon: Settings, label: "Settings", path: "/dashboard/settings" },
 ];
 

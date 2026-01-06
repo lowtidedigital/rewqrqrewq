@@ -14,6 +14,7 @@ import LinkDetail from "./pages/LinkDetail";
 import CreateLink from "./pages/CreateLink";
 import Analytics from "./pages/Analytics";
 import Settings from "./pages/Settings";
+import Billing from "./pages/Billing";
 import DashboardLayout from "./components/DashboardLayout";
 import NotFound from "./pages/NotFound";
 
@@ -44,6 +45,7 @@ const App = () => (
               <Route path="links/:id" element={<LinkDetail />} />
               <Route path="analytics" element={<Analytics />} />
               <Route path="settings" element={<Settings />} />
+              <Route path="billing" element={<Billing />} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>
