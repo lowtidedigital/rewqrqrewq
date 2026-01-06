@@ -24,6 +24,7 @@ import {
   AlertCircle,
   Check
 } from "lucide-react";
+import { config, buildShortUrl } from "@/config";
 
 interface CreateLinkFormProps {
   onSuccess?: (link: any) => void;
@@ -68,10 +69,11 @@ const CreateLinkForm = ({ onSuccess }: CreateLinkFormProps) => {
     // Simulate API call
     await new Promise((resolve) => setTimeout(resolve, 1000));
 
+    const slug = formData.customSlug || generateSlug();
     const newLink = {
       id: crypto.randomUUID(),
-      slug: formData.customSlug || generateSlug(),
-      shortUrl: `https://lh.io/${formData.customSlug || generateSlug()}`,
+      slug: slug,
+      shortUrl: buildShortUrl(slug),
       longUrl: formData.longUrl,
       title: formData.title || undefined,
       tags: formData.tags,
@@ -133,7 +135,7 @@ const CreateLinkForm = ({ onSuccess }: CreateLinkFormProps) => {
         <p className="text-muted-foreground mb-4">Your short link is ready to use</p>
         <div className="p-4 rounded-xl bg-secondary/50 border border-border">
           <code className="text-primary font-mono">
-            https://lh.io/{formData.customSlug || "abc123"}
+            {buildShortUrl(formData.customSlug || "abc123")}
           </code>
         </div>
       </motion.div>
@@ -172,7 +174,7 @@ const CreateLinkForm = ({ onSuccess }: CreateLinkFormProps) => {
           Custom Slug <span className="text-muted-foreground text-xs">(optional)</span>
         </Label>
         <div className="flex items-center gap-2">
-          <span className="text-muted-foreground text-sm">lh.io/</span>
+          <span className="text-muted-foreground text-sm">{config.shortDomain}/r/</span>
           <Input
             id="customSlug"
             type="text"

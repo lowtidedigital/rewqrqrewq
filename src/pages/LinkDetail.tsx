@@ -36,12 +36,13 @@ import {
   Save,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { config, buildShortUrl } from "@/config";
 
 // Mock data for the link
 const mockLink = {
   id: "1",
   slug: "spring-sale",
-  shortUrl: "https://lh.io/spring-sale",
+  shortUrl: buildShortUrl("spring-sale"),
   longUrl: "https://mystore.com/collections/spring-2024-sale?utm_source=social&utm_medium=instagram",
   title: "Spring Sale Campaign",
   clicks: 4521,
@@ -211,7 +212,7 @@ const LinkDetail = () => {
                     Custom Slug
                   </Label>
                   <div className="flex items-center gap-2">
-                    <span className="text-muted-foreground text-sm">lh.io/</span>
+                    <span className="text-muted-foreground text-sm">{config.shortDomain}/r/</span>
                     <Input
                       id="slug"
                       type="text"

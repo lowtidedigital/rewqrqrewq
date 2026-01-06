@@ -12,13 +12,14 @@ import {
 } from "@/components/ui/select";
 import LinkCard, { LinkData } from "@/components/LinkCard";
 import { Plus, Search, Filter, SortAsc, Link2 } from "lucide-react";
+import { buildShortUrl } from "@/config";
 
 // Mock data
 const mockLinks: LinkData[] = [
   {
     id: "1",
     slug: "spring-sale",
-    shortUrl: "https://lh.io/spring-sale",
+    shortUrl: buildShortUrl("spring-sale"),
     longUrl: "https://mystore.com/collections/spring-2024-sale?utm_source=social&utm_medium=instagram",
     title: "Spring Sale Campaign",
     clicks: 4521,
@@ -29,7 +30,7 @@ const mockLinks: LinkData[] = [
   {
     id: "2",
     slug: "product-demo",
-    shortUrl: "https://lh.io/product-demo",
+    shortUrl: buildShortUrl("product-demo"),
     longUrl: "https://calendly.com/team/product-demo-30min",
     title: "Product Demo Booking",
     clicks: 1823,
@@ -40,7 +41,7 @@ const mockLinks: LinkData[] = [
   {
     id: "3",
     slug: "newsletter",
-    shortUrl: "https://lh.io/newsletter",
+    shortUrl: buildShortUrl("newsletter"),
     longUrl: "https://mysite.com/subscribe?ref=qr-code",
     title: "Newsletter Signup",
     clicks: 892,
@@ -50,7 +51,7 @@ const mockLinks: LinkData[] = [
   {
     id: "4",
     slug: "blog-post",
-    shortUrl: "https://lh.io/blog-post",
+    shortUrl: buildShortUrl("blog-post"),
     longUrl: "https://blog.mysite.com/how-to-increase-conversions-with-short-links",
     title: "Blog: Increase Conversions",
     clicks: 3105,
@@ -61,7 +62,7 @@ const mockLinks: LinkData[] = [
   {
     id: "5",
     slug: "webinar-reg",
-    shortUrl: "https://lh.io/webinar-reg",
+    shortUrl: buildShortUrl("webinar-reg"),
     longUrl: "https://zoom.us/webinar/register/WN_abc123xyz",
     title: "Q1 Webinar Registration",
     clicks: 756,
