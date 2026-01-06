@@ -1,6 +1,6 @@
 // Subscription context - provides plan status across the app
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { getSubscriptionStatus, SubscriptionStatus } from '@/lib/billing';
+import { getSubscriptionStatus, SubscriptionStatus, hasProAccess } from '@/lib/billing';
 import { PlanName, hasApiAccess, isPaidPlan } from '@/lib/plans';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -12,6 +12,7 @@ interface SubscriptionContextType {
   canAccessApi: boolean;
   isPaid: boolean;
   isActive: boolean;
+  hasProPlanAccess: boolean; // New: true only if starter/enterprise AND active
   refresh: () => Promise<void>;
 }
 
@@ -60,6 +61,7 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const canAccessApi = hasApiAccess(currentPlan);
   const isPaid = isPaidPlan(currentPlan);
   const isActive = subscription?.status === 'active' || subscription?.status === 'trialing';
+  const hasProPlanAccess = hasProAccess(subscription);
 
   return (
     <SubscriptionContext.Provider
@@ -71,6 +73,7 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
         canAccessApi,
         isPaid,
         isActive,
+        hasProPlanAccess,
         refresh: fetchSubscription,
       }}
     >
