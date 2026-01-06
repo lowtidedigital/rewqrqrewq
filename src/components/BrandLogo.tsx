@@ -3,51 +3,73 @@ import { cn } from "@/lib/utils";
 import { Link } from "react-router-dom";
 
 interface BrandLogoProps {
-  variant?: "sidebar" | "drawer" | "header" | "collapsed";
+  variant?: "drawer" | "sidebarExpanded" | "sidebarCollapsed" | "header" | "authPanel";
   linkTo?: string;
   className?: string;
 }
 
 const variantConfig = {
-  sidebar: {
-    imageClass: "h-20 max-w-[220px]", // Large for sidebar with whitespace
-    container: "px-3 py-3",
-    showContainer: true,
-  },
   drawer: {
-    imageClass: "h-24 max-w-[260px]", // Larger for mobile drawer
-    container: "px-3 py-4",
-    showContainer: true,
+    containerClass: "pt-6 pb-5 px-5",
+    plateClass: "rounded-2xl bg-card/40 border border-border/50 shadow-sm p-5",
+    imageClass: "h-[100px] w-auto",
+    scale: "scale-[1.8]", // Aggressive scale to overcome transparent padding
+    wrapperClass: "overflow-hidden flex items-center justify-center h-[100px]",
+  },
+  sidebarExpanded: {
+    containerClass: "pt-5 pb-4 px-4",
+    plateClass: "rounded-2xl bg-card/40 border border-border/50 shadow-sm p-4",
+    imageClass: "h-[80px] w-auto",
+    scale: "scale-[1.6]",
+    wrapperClass: "overflow-hidden flex items-center justify-center h-[80px]",
+  },
+  sidebarCollapsed: {
+    containerClass: "py-3 px-2",
+    plateClass: "rounded-xl bg-card/40 border border-border/50 p-2",
+    imageClass: "h-[48px] w-[48px]",
+    scale: "scale-[1.5]",
+    wrapperClass: "overflow-hidden flex items-center justify-center h-[48px] w-[48px]",
   },
   header: {
-    imageClass: "h-12 max-w-[180px]", // Bigger for navbar visibility
-    container: "",
-    showContainer: false,
+    containerClass: "",
+    plateClass: "",
+    imageClass: "h-[48px] w-auto",
+    scale: "scale-[1.6]",
+    wrapperClass: "overflow-hidden flex items-center justify-center h-[48px]",
   },
-  collapsed: {
-    imageClass: "h-12 w-12", // Square for collapsed
-    container: "p-1",
-    showContainer: true,
+  authPanel: {
+    containerClass: "",
+    plateClass: "rounded-2xl bg-white/10 border border-white/20 shadow-lg p-4",
+    imageClass: "h-[72px] w-auto",
+    scale: "scale-[1.6]",
+    wrapperClass: "overflow-hidden flex items-center justify-center h-[72px]",
   },
 };
 
-const BrandLogo = ({ variant = "sidebar", linkTo, className }: BrandLogoProps) => {
+const BrandLogo = ({ variant = "sidebarExpanded", linkTo, className }: BrandLogoProps) => {
   const config = variantConfig[variant];
   
   const logoContent = (
-    <div 
-      className={cn(
-        "flex items-center justify-center",
-        config.showContainer && "rounded-xl bg-card/30 border border-border/40",
-        config.container,
-        className
+    <div className={cn(config.containerClass, className)}>
+      {config.plateClass ? (
+        <div className={config.plateClass}>
+          <div className={config.wrapperClass}>
+            <img 
+              src={linkHarbourLogo} 
+              alt="Link Harbour" 
+              className={cn(config.imageClass, config.scale, "object-contain")}
+            />
+          </div>
+        </div>
+      ) : (
+        <div className={config.wrapperClass}>
+          <img 
+            src={linkHarbourLogo} 
+            alt="Link Harbour" 
+            className={cn(config.imageClass, config.scale, "object-contain")}
+          />
+        </div>
       )}
-    >
-      <img 
-        src={linkHarbourLogo} 
-        alt="Link Harbour" 
-        className={cn(config.imageClass, "w-auto object-contain")}
-      />
     </div>
   );
   

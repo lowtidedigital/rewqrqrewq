@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import BrandLogo from "@/components/BrandLogo";
 import { useAuth } from "@/contexts/AuthContext";
-import { Anchor, Mail, Lock, User, ArrowLeft, AlertCircle, Eye, EyeOff, CheckCircle } from "lucide-react";
+import { Mail, Lock, User, ArrowLeft, AlertCircle, Eye, EyeOff, CheckCircle } from "lucide-react";
 
 type AuthMode = "signin" | "signup" | "reset" | "confirm" | "reset-confirm";
 
@@ -152,12 +152,7 @@ const Auth = () => {
 
         {/* Content */}
         <div className="relative z-10 flex flex-col justify-between p-12 w-full">
-          <Link to="/" className="flex items-center gap-2 group">
-            <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center group-hover:bg-white/30 transition-colors">
-              <Anchor className="w-6 h-6 text-white" />
-            </div>
-            <span className="font-display font-bold text-2xl text-white">Link Harbour</span>
-          </Link>
+          <BrandLogo variant="authPanel" linkTo="/" />
 
           <div className="space-y-6">
             <h1 className="font-display text-4xl xl:text-5xl font-bold text-white leading-tight">
