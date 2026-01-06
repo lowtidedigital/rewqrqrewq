@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import Logo from "@/components/Logo";
+import BrandLogo from "@/components/BrandLogo";
 import { useAuth } from "@/contexts/AuthContext";
 import { Anchor, Mail, Lock, User, ArrowLeft, AlertCircle, Eye, EyeOff, CheckCircle } from "lucide-react";
 
@@ -201,9 +201,9 @@ const Auth = () => {
       >
         <div className="w-full max-w-md">
           {/* Mobile Logo */}
-          <Link to="/" className="flex lg:hidden items-center gap-2 mb-8">
-            <Logo size="md" />
-          </Link>
+          <div className="lg:hidden mb-8">
+            <BrandLogo variant="header" linkTo="/" />
+          </div>
 
           {/* Back link */}
           <Link

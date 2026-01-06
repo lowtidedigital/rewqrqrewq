@@ -1,8 +1,9 @@
 import { useLocation, Link } from "react-router-dom";
 import { useEffect, useState } from "react";
-import { Anchor, ExternalLink } from "lucide-react";
+import { ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { config, buildAppUrl } from "@/config";
+import BrandLogo from "@/components/BrandLogo";
 
 const NotFound = () => {
   const location = useLocation();
@@ -27,8 +28,8 @@ const NotFound = () => {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
         <div className="text-center max-w-md px-4">
-          <div className="w-16 h-16 rounded-2xl gradient-primary flex items-center justify-center mx-auto mb-6">
-            <Anchor className="w-8 h-8 text-primary-foreground" />
+          <div className="mx-auto mb-6">
+            <BrandLogo variant="header" />
           </div>
           <h1 className="mb-2 font-display text-3xl font-bold">Short Links Live Elsewhere</h1>
           <p className="mb-6 text-muted-foreground">
@@ -58,8 +59,8 @@ const NotFound = () => {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background">
       <div className="text-center max-w-md px-4">
-        <div className="w-16 h-16 rounded-2xl gradient-primary flex items-center justify-center mx-auto mb-6">
-          <Anchor className="w-8 h-8 text-primary-foreground" />
+        <div className="mx-auto mb-6">
+          <BrandLogo variant="header" />
         </div>
         <h1 className="mb-2 font-display text-6xl font-bold gradient-text">404</h1>
         <p className="mb-6 text-xl text-muted-foreground">This link has drifted away from the harbour.</p>

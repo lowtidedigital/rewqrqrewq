@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import Logo from "@/components/Logo";
+import BrandLogo from "@/components/BrandLogo";
 import { Menu, X } from "lucide-react";
 import { useState } from "react";
 
@@ -18,9 +18,7 @@ const Navbar = () => {
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <Link to="/" className="group">
-            <Logo size="md" showText={true} />
-          </Link>
+          <BrandLogo variant="header" linkTo="/" />
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center gap-8">

@@ -2,7 +2,7 @@ import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import Navbar from "@/components/Navbar";
-import Logo from "@/components/Logo";
+import BrandLogo from "@/components/BrandLogo";
 import { 
   Anchor, 
   Link2, 
@@ -12,7 +12,6 @@ import {
   Globe,
   ArrowRight,
   Check,
-  Sparkles,
   Code,
 } from "lucide-react";
 
@@ -255,7 +254,7 @@ const Index = () => {
       <footer className="py-12 px-4 border-t border-border/50">
         <div className="container mx-auto">
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-            <Logo size="sm" showText={false} />
+            <BrandLogo variant="header" linkTo="/" />
             <p className="text-muted-foreground text-sm">
               © 2025 Link Harbour. Built with ❤️ on AWS.
             </p>
