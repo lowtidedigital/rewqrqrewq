@@ -125,34 +125,23 @@ const DashboardSidebar = () => {
         )}
       >
         {/* Brand Header */}
-        <div className="border-b border-sidebar-border/50 bg-sidebar-accent/30">
-          <div className="flex items-center justify-between p-3">
-            <BrandLogo 
-              variant={collapsed ? "collapsed" : "sidebar"} 
-              linkTo="/dashboard"
-              className={cn(collapsed && "mx-auto")}
-            />
-            {!collapsed && (
-              <button
-                onClick={() => setCollapsed(true)}
-                className="p-2 rounded-md hover:bg-sidebar-accent text-sidebar-foreground/50 hover:text-sidebar-foreground transition-colors"
-                aria-label="Collapse sidebar"
-              >
-                <ChevronLeft className="w-4 h-4" />
-              </button>
-            )}
+        <div className="border-b border-sidebar-border/50">
+          <BrandLogo 
+            variant={collapsed ? "sidebarCollapsed" : "sidebarExpanded"} 
+            linkTo="/dashboard"
+          />
+          <div className={cn(
+            "flex justify-center pb-2",
+            !collapsed && "px-4"
+          )}>
+            <button
+              onClick={() => setCollapsed(!collapsed)}
+              className="p-2 rounded-md hover:bg-sidebar-accent text-sidebar-foreground/50 hover:text-sidebar-foreground transition-colors"
+              aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+            >
+              {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
+            </button>
           </div>
-          {collapsed && (
-            <div className="flex justify-center pb-3">
-              <button
-                onClick={() => setCollapsed(false)}
-                className="p-2 rounded-md hover:bg-sidebar-accent text-sidebar-foreground/50 hover:text-sidebar-foreground transition-colors"
-                aria-label="Expand sidebar"
-              >
-                <ChevronRight className="w-4 h-4" />
-              </button>
-            </div>
-          )}
         </div>
 
         <Separator className="bg-sidebar-border/30" />
@@ -234,13 +223,11 @@ const MobileSidebar = ({ onSignOut }: { onSignOut: () => void }) => {
           <Menu className="w-6 h-6" />
         </Button>
       </SheetTrigger>
-      <SheetContent side="left" className="w-72 p-0 bg-sidebar border-sidebar-border">
-        {/* Brand Header */}
-        <div className="border-b border-sidebar-border/50 bg-sidebar-accent/30 p-4">
+      <SheetContent side="left" className="w-80 p-0 bg-sidebar border-sidebar-border">
+        {/* Brand Header - prominent logo */}
+        <div className="border-b border-sidebar-border/50">
           <BrandLogo variant="drawer" linkTo="/dashboard" />
         </div>
-
-        <Separator className="bg-sidebar-border/30" />
 
         {/* Create Link Button */}
         <div className="p-4">
