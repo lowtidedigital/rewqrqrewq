@@ -65,7 +65,7 @@ export async function handler(event: APIGatewayProxyEventV2): Promise<APIGateway
               <div class="container">
                 <h1>404</h1>
                 <p>This short link doesn't exist.</p>
-                <p><a href="https://${process.env.APP_DOMAIN || 'awsapp.linkharbour.io'}">Create your own short links →</a></p>
+                <p><a href="https://${process.env.APP_DOMAIN || 'app.linkharbour.io'}">Create your own short links →</a></p>
               </div>
             </body>
           </html>

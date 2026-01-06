@@ -2,61 +2,51 @@ import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import Navbar from "@/components/Navbar";
-import { Check, Anchor, Star } from "lucide-react";
+import Logo from "@/components/Logo";
+import { Check, Star, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { PLANS, PlanName, formatPrice } from "@/lib/plans";
 
 const plans = [
   {
-    name: "Starter",
-    price: "$0",
-    period: "forever",
-    description: "Perfect for personal projects and testing",
-    features: [
-      "50 short links",
-      "1,000 clicks/month",
-      "Basic analytics",
-      "QR codes (PNG only)",
-      "7-day link history",
-    ],
+    ...PLANS.free,
     cta: "Get Started",
     popular: false,
   },
   {
-    name: "Professional",
-    price: "$12",
-    period: "per month",
-    description: "For professionals and growing teams",
-    features: [
-      "Unlimited short links",
-      "100,000 clicks/month",
-      "Advanced analytics",
-      "QR codes (PNG + SVG)",
-      "Custom slugs",
-      "Link expiration",
-      "API access",
-      "Priority support",
-    ],
-    cta: "Start Pro Trial",
+    ...PLANS.starter,
+    cta: "Start with Starter",
+    popular: false,
+  },
+  {
+    ...PLANS.pro,
+    cta: "Upgrade to Pro",
     popular: true,
   },
   {
-    name: "Enterprise",
-    price: "Custom",
-    period: "contact us",
-    description: "For large organisations with custom needs",
-    features: [
-      "Everything in Professional",
-      "Unlimited clicks",
-      "Custom domain",
-      "SSO / SAML",
-      "Dedicated support",
-      "SLA guarantee",
-      "Custom integrations",
-      "Team management",
-    ],
-    cta: "Contact Sales",
+    ...PLANS.business,
+    cta: "Go Business",
     popular: false,
   },
+];
+
+const enterprisePlan = {
+  ...PLANS.enterprise,
+  cta: "Contact Sales",
+};
+
+// Feature comparison for the table
+const featureComparison = [
+  { feature: "Short links", free: "50", starter: "250", pro: "2,000", business: "10,000" },
+  { feature: "Tracked clicks/month", free: "1,000", starter: "10,000", pro: "100,000", business: "500,000" },
+  { feature: "Analytics retention", free: "7 days", starter: "30 days", pro: "1 year", business: "2 years" },
+  { feature: "QR codes", free: "PNG", starter: "PNG + SVG", pro: "PNG + SVG", business: "PNG + SVG" },
+  { feature: "Custom slugs", free: false, starter: true, pro: true, business: true },
+  { feature: "Link expiration", free: false, starter: true, pro: true, business: true },
+  { feature: "Custom domains", free: "—", starter: "1", pro: "5", business: "20" },
+  { feature: "API access", free: false, starter: false, pro: true, business: true },
+  { feature: "Team members", free: "—", starter: "—", pro: "—", business: "10" },
+  { feature: "Priority support", free: false, starter: true, pro: true, business: true },
 ];
 
 const Pricing = () => {
@@ -83,7 +73,7 @@ const Pricing = () => {
           </motion.div>
 
           {/* Pricing Cards */}
-          <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-7xl mx-auto mb-16">
             {plans.map((plan, index) => (
               <motion.div
                 key={plan.name}
@@ -91,42 +81,42 @@ const Pricing = () => {
                 animate={{ y: 0, opacity: 1 }}
                 transition={{ duration: 0.5, delay: index * 0.1 }}
                 className={cn(
-                  "relative rounded-2xl border bg-card p-8 flex flex-col",
+                  "relative rounded-2xl border bg-card p-6 flex flex-col",
                   plan.popular
-                    ? "border-primary shadow-xl shadow-primary/10 scale-105"
+                    ? "border-primary shadow-xl shadow-primary/10 lg:scale-105"
                     : "border-border"
                 )}
               >
                 {plan.popular && (
-                  <div className="absolute -top-4 left-1/2 -translate-x-1/2">
-                    <div className="flex items-center gap-1 px-4 py-1.5 rounded-full gradient-primary text-primary-foreground text-sm font-medium">
-                      <Star className="w-4 h-4" />
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                    <div className="flex items-center gap-1 px-3 py-1 rounded-full gradient-primary text-primary-foreground text-sm font-medium">
+                      <Star className="w-3 h-3" />
                       Most Popular
                     </div>
                   </div>
                 )}
 
-                <div className="mb-6">
-                  <h3 className="font-display text-2xl font-bold mb-2">{plan.name}</h3>
+                <div className="mb-5">
+                  <h3 className="font-display text-xl font-bold mb-2">{plan.displayName}</h3>
                   <div className="flex items-baseline gap-1">
-                    <span className="font-display text-5xl font-bold">{plan.price}</span>
-                    <span className="text-muted-foreground">/{plan.period}</span>
+                    <span className="font-display text-4xl font-bold">{formatPrice(plan)}</span>
+                    {plan.price > 0 && (
+                      <span className="text-muted-foreground">/month</span>
+                    )}
                   </div>
-                  <p className="text-muted-foreground mt-2">{plan.description}</p>
                 </div>
 
-                <ul className="space-y-3 flex-1 mb-8">
+                <ul className="space-y-2.5 flex-1 mb-6">
                   {plan.features.map((feature) => (
-                    <li key={feature} className="flex items-start gap-3">
-                      <Check className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
-                      <span className="text-muted-foreground">{feature}</span>
+                    <li key={feature} className="flex items-start gap-2">
+                      <Check className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
+                      <span className="text-sm text-muted-foreground">{feature}</span>
                     </li>
                   ))}
                 </ul>
 
                 <Button
                   variant={plan.popular ? "hero" : "outline"}
-                  size="lg"
                   className="w-full"
                   asChild
                 >
@@ -136,11 +126,107 @@ const Pricing = () => {
             ))}
           </div>
 
+          {/* Enterprise CTA */}
+          <motion.div
+            initial={{ y: 20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ duration: 0.5, delay: 0.5 }}
+            className="max-w-3xl mx-auto mb-20"
+          >
+            <div className="rounded-2xl border border-border bg-card p-8 text-center">
+              <h3 className="font-display text-2xl font-bold mb-2">Enterprise</h3>
+              <p className="text-muted-foreground mb-6 max-w-lg mx-auto">
+                Need unlimited links, custom integrations, SLA guarantees, or dedicated infrastructure? 
+                Let's build a plan that fits your organization.
+              </p>
+              <Button variant="hero" size="lg" asChild>
+                <a href="mailto:sales@linkharbour.io">Contact Sales</a>
+              </Button>
+            </div>
+          </motion.div>
+
+          {/* Feature Comparison Table */}
+          <motion.div
+            initial={{ y: 20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ duration: 0.5, delay: 0.6 }}
+            className="max-w-5xl mx-auto"
+          >
+            <h2 className="font-display text-2xl font-bold text-center mb-8">Compare Plans</h2>
+            
+            <div className="rounded-xl border border-border overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="bg-muted/50">
+                      <th className="text-left py-4 px-4 font-medium">Feature</th>
+                      <th className="text-center py-4 px-4 font-medium">Free</th>
+                      <th className="text-center py-4 px-4 font-medium">Starter</th>
+                      <th className="text-center py-4 px-4 font-medium bg-primary/5">Pro</th>
+                      <th className="text-center py-4 px-4 font-medium">Business</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {featureComparison.map((row, i) => (
+                      <tr key={row.feature} className={i % 2 === 0 ? "" : "bg-muted/20"}>
+                        <td className="py-3 px-4 text-muted-foreground">{row.feature}</td>
+                        <td className="py-3 px-4 text-center">
+                          {typeof row.free === "boolean" ? (
+                            row.free ? (
+                              <Check className="w-4 h-4 text-primary mx-auto" />
+                            ) : (
+                              <X className="w-4 h-4 text-muted-foreground/50 mx-auto" />
+                            )
+                          ) : (
+                            <span className="text-sm">{row.free}</span>
+                          )}
+                        </td>
+                        <td className="py-3 px-4 text-center">
+                          {typeof row.starter === "boolean" ? (
+                            row.starter ? (
+                              <Check className="w-4 h-4 text-primary mx-auto" />
+                            ) : (
+                              <X className="w-4 h-4 text-muted-foreground/50 mx-auto" />
+                            )
+                          ) : (
+                            <span className="text-sm">{row.starter}</span>
+                          )}
+                        </td>
+                        <td className="py-3 px-4 text-center bg-primary/5">
+                          {typeof row.pro === "boolean" ? (
+                            row.pro ? (
+                              <Check className="w-4 h-4 text-primary mx-auto" />
+                            ) : (
+                              <X className="w-4 h-4 text-muted-foreground/50 mx-auto" />
+                            )
+                          ) : (
+                            <span className="text-sm font-medium">{row.pro}</span>
+                          )}
+                        </td>
+                        <td className="py-3 px-4 text-center">
+                          {typeof row.business === "boolean" ? (
+                            row.business ? (
+                              <Check className="w-4 h-4 text-primary mx-auto" />
+                            ) : (
+                              <X className="w-4 h-4 text-muted-foreground/50 mx-auto" />
+                            )
+                          ) : (
+                            <span className="text-sm">{row.business}</span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </motion.div>
+
           {/* FAQ or note */}
           <motion.div
             initial={{ y: 20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
-            transition={{ duration: 0.5, delay: 0.4 }}
+            transition={{ duration: 0.5, delay: 0.7 }}
             className="text-center mt-16"
           >
             <p className="text-muted-foreground">
@@ -157,12 +243,7 @@ const Pricing = () => {
       <footer className="py-12 px-4 border-t border-border/50">
         <div className="container mx-auto">
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center">
-                <Anchor className="w-5 h-5 text-primary-foreground" />
-              </div>
-              <span className="font-display font-bold text-xl">Link Harbour</span>
-            </div>
+            <Logo size="sm" showText={false} />
             <p className="text-muted-foreground text-sm">
               © 2025 Link Harbour. Built with ❤️ on AWS.
             </p>
