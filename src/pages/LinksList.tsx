@@ -1,8 +1,10 @@
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Select,
   SelectContent,
@@ -11,85 +13,44 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import LinkCard, { LinkData } from "@/components/LinkCard";
-import { Plus, Search, Filter, SortAsc, Link2 } from "lucide-react";
+import { Plus, Search, Filter, SortAsc, Link2, AlertCircle } from "lucide-react";
 import { buildShortUrl } from "@/config";
+import { api, Link as ApiLink } from "@/lib/api";
 
-// Mock data
-const mockLinks: LinkData[] = [
-  {
-    id: "1",
-    slug: "spring-sale",
-    shortUrl: buildShortUrl("spring-sale"),
-    longUrl: "https://mystore.com/collections/spring-2024-sale?utm_source=social&utm_medium=instagram",
-    title: "Spring Sale Campaign",
-    clicks: 4521,
-    enabled: true,
-    createdAt: "2024-03-15T10:30:00Z",
-    tags: ["marketing", "sale"],
-  },
-  {
-    id: "2",
-    slug: "product-demo",
-    shortUrl: buildShortUrl("product-demo"),
-    longUrl: "https://calendly.com/team/product-demo-30min",
-    title: "Product Demo Booking",
-    clicks: 1823,
-    enabled: true,
-    createdAt: "2024-03-10T14:20:00Z",
-    tags: ["sales"],
-  },
-  {
-    id: "3",
-    slug: "newsletter",
-    shortUrl: buildShortUrl("newsletter"),
-    longUrl: "https://mysite.com/subscribe?ref=qr-code",
-    title: "Newsletter Signup",
-    clicks: 892,
-    enabled: false,
-    createdAt: "2024-02-28T09:00:00Z",
-  },
-  {
-    id: "4",
-    slug: "blog-post",
-    shortUrl: buildShortUrl("blog-post"),
-    longUrl: "https://blog.mysite.com/how-to-increase-conversions-with-short-links",
-    title: "Blog: Increase Conversions",
-    clicks: 3105,
-    enabled: true,
-    createdAt: "2024-03-01T11:00:00Z",
-    tags: ["content", "blog"],
-  },
-  {
-    id: "5",
-    slug: "webinar-reg",
-    shortUrl: buildShortUrl("webinar-reg"),
-    longUrl: "https://zoom.us/webinar/register/WN_abc123xyz",
-    title: "Q1 Webinar Registration",
-    clicks: 756,
-    enabled: true,
-    createdAt: "2024-02-20T08:30:00Z",
-    tags: ["webinar", "marketing"],
-  },
-];
+// Transform API link to LinkCard format
+const transformLink = (link: ApiLink): LinkData => ({
+  id: link.link_id,
+  slug: link.slug,
+  shortUrl: buildShortUrl(link.slug),
+  longUrl: link.long_url,
+  title: link.title,
+  clicks: link.click_count || 0,
+  enabled: link.enabled,
+  createdAt: link.created_at,
+  tags: link.tags,
+});
 
 const LinksList = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState("newest");
   const [filterStatus, setFilterStatus] = useState("all");
 
-  const filteredLinks = mockLinks
+  // Fetch links from API
+  const { data: linksResponse, isLoading, error } = useQuery({
+    queryKey: ['links', searchQuery],
+    queryFn: () => api.getLinks({ search: searchQuery || undefined }),
+  });
+
+  const links = linksResponse?.items.map(transformLink) || [];
+
+  const filteredLinks = links
     .filter((link) => {
-      const matchesSearch =
-        link.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        link.slug.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        link.longUrl.toLowerCase().includes(searchQuery.toLowerCase());
-      
       const matchesStatus =
         filterStatus === "all" ||
         (filterStatus === "enabled" && link.enabled) ||
         (filterStatus === "disabled" && !link.enabled);
       
-      return matchesSearch && matchesStatus;
+      return matchesStatus;
     })
     .sort((a, b) => {
       switch (sortBy) {
@@ -126,6 +87,18 @@ const LinksList = () => {
           </Link>
         </Button>
       </motion.div>
+
+      {/* Error State */}
+      {error && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="flex items-center gap-3 p-4 rounded-xl bg-destructive/10 border border-destructive/30 text-destructive"
+        >
+          <AlertCircle className="w-5 h-5 flex-shrink-0" />
+          <p className="text-sm">Failed to load links. Please try again.</p>
+        </motion.div>
+      )}
 
       {/* Filters */}
       <motion.div
@@ -175,7 +148,13 @@ const LinksList = () => {
 
       {/* Links List */}
       <div className="space-y-4">
-        {filteredLinks.length > 0 ? (
+        {isLoading ? (
+          <>
+            {[1, 2, 3, 4, 5].map((i) => (
+              <Skeleton key={i} className="h-24 rounded-xl" />
+            ))}
+          </>
+        ) : filteredLinks.length > 0 ? (
           filteredLinks.map((link, index) => (
             <LinkCard key={link.id} link={link} delay={0.2 + index * 0.05} />
           ))

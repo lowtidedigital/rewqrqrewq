@@ -47,7 +47,7 @@ const DashboardSidebar = () => {
       {/* Logo */}
       <div className="h-16 flex items-center justify-between px-4 border-b border-sidebar-border">
         <Link to="/dashboard" className="flex items-center gap-2 group">
-          <Logo showText={!collapsed} size="sm" />
+          <Logo showText={false} size="sm" />
         </Link>
         <button
           onClick={() => setCollapsed(!collapsed)}
