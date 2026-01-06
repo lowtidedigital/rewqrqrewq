@@ -104,7 +104,7 @@ const Settings = () => {
           </div>
           <div>
             <h2 className="font-display text-lg font-semibold">API Key</h2>
-            <p className="text-sm text-muted-foreground">Use this key to access the LinkHarbour API</p>
+            <p className="text-sm text-muted-foreground">Use this key to access the Link Harbour API</p>
           </div>
         </div>
 

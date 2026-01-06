@@ -70,7 +70,7 @@ const Auth = () => {
             <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center group-hover:bg-white/30 transition-colors">
               <Anchor className="w-6 h-6 text-white" />
             </div>
-            <span className="font-display font-bold text-2xl text-white">LinkHarbour</span>
+            <span className="font-display font-bold text-2xl text-white">Link Harbour</span>
           </Link>
 
           <div className="space-y-6">
@@ -80,7 +80,7 @@ const Auth = () => {
               amplify reach.
             </h1>
             <p className="text-xl text-white/80 max-w-md">
-              Join thousands of marketers using LinkHarbour to create, track, and optimise their links.
+              Join thousands of marketers using Link Harbour to create, track, and optimise their links.
             </p>
 
             <div className="flex items-center gap-4 pt-4">
@@ -101,7 +101,7 @@ const Auth = () => {
           </div>
 
           <p className="text-white/60 text-sm">
-            © 2025 LinkHarbour. All rights reserved.
+            © 2025 Link Harbour. All rights reserved.
           </p>
         </div>
       </motion.div>
@@ -136,7 +136,7 @@ const Auth = () => {
               {mode === "reset" && "Reset password"}
             </h2>
             <p className="text-muted-foreground">
-              {mode === "signin" && "Sign in to your LinkHarbour account"}
+              {mode === "signin" && "Sign in to your Link Harbour account"}
               {mode === "signup" && "Start shortening links in seconds"}
               {mode === "reset" && "We'll send you a reset link"}
             </p>

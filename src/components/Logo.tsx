@@ -18,12 +18,12 @@ const Logo = ({ showText = true, size = "md", className }: LogoProps) => {
     <div className={cn("flex items-center gap-2", className)}>
       <img 
         src={linkHarbourLogo} 
-        alt="LinkHarbour" 
+        alt="Link Harbour" 
         className={cn(sizeClasses[size], "object-contain")}
       />
       {showText && (
         <span className="font-display font-bold text-xl">
-          LinkHarbour
+          Link Harbour
         </span>
       )}
     </div>
