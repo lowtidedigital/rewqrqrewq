@@ -6,9 +6,10 @@ const DashboardLayout = () => {
   return (
     <div className="min-h-screen bg-background">
       <DashboardSidebar />
-      <div className="pl-64 transition-all duration-300">
+      {/* Desktop: offset for sidebar. Mobile: offset for top header */}
+      <div className="md:pl-64 pt-16 md:pt-0 transition-all duration-300">
         <DashboardHeader />
-        <main className="p-6">
+        <main className="p-4 md:p-6">
           <Outlet />
         </main>
       </div>
