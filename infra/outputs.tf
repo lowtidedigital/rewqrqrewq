@@ -70,11 +70,11 @@ output "dynamodb_aggregates_table" {
 output "frontend_config" {
   description = "Frontend configuration as JSON"
   value = jsonencode({
-    VITE_API_URL           = aws_apigatewayv2_api.main.api_endpoint
-    VITE_COGNITO_REGION    = var.aws_region
+    VITE_API_URL              = aws_apigatewayv2_api.main.api_endpoint
+    VITE_COGNITO_REGION       = var.aws_region
     VITE_COGNITO_USER_POOL_ID = aws_cognito_user_pool.main.id
-    VITE_COGNITO_CLIENT_ID = aws_cognito_user_pool_client.web.id
-    VITE_SHORT_DOMAIN      = local.short_domain
+    VITE_COGNITO_CLIENT_ID    = aws_cognito_user_pool_client.web.id
+    VITE_SHORT_DOMAIN         = local.short_domain
   })
   sensitive = false
 }

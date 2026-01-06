@@ -16,11 +16,12 @@
     "@aws-sdk/lib-dynamodb": "^3.500.0",
     "@aws-sdk/s3-request-presigner": "^3.500.0",
     "qrcode": "^1.5.3",
+    "stripe": "^20.1.0",
     "uuid": "^9.0.1"
   },
   "devDependencies": {
     "@types/aws-lambda": "^8.10.131",
-    "@types/node": "^20.10.0",
+    "@types/node": "^20.19.27",
     "@types/qrcode": "^1.5.5",
     "@types/uuid": "^9.0.7",
     "archiver": "^6.0.1",

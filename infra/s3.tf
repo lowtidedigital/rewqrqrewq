@@ -8,7 +8,7 @@
 
 resource "aws_s3_bucket" "spa" {
   bucket = "${var.project_name}-spa-${random_id.suffix.hex}"
-  
+
   tags = {
     Name = "${var.project_name}-spa-bucket"
   }
@@ -16,7 +16,7 @@ resource "aws_s3_bucket" "spa" {
 
 resource "aws_s3_bucket_versioning" "spa" {
   bucket = aws_s3_bucket.spa.id
-  
+
   versioning_configuration {
     status = "Enabled"
   }
@@ -24,7 +24,7 @@ resource "aws_s3_bucket_versioning" "spa" {
 
 resource "aws_s3_bucket_server_side_encryption_configuration" "spa" {
   bucket = aws_s3_bucket.spa.id
-  
+
   rule {
     apply_server_side_encryption_by_default {
       sse_algorithm = "AES256"
@@ -34,7 +34,7 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "spa" {
 
 resource "aws_s3_bucket_public_access_block" "spa" {
   bucket = aws_s3_bucket.spa.id
-  
+
   block_public_acls       = true
   block_public_policy     = true
   ignore_public_acls      = true
@@ -53,13 +53,13 @@ resource "aws_cloudfront_origin_access_control" "spa" {
 # Bucket policy to allow CloudFront access
 resource "aws_s3_bucket_policy" "spa" {
   bucket = aws_s3_bucket.spa.id
-  
+
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
       {
-        Sid       = "AllowCloudFrontServicePrincipal"
-        Effect    = "Allow"
+        Sid    = "AllowCloudFrontServicePrincipal"
+        Effect = "Allow"
         Principal = {
           Service = "cloudfront.amazonaws.com"
         }
@@ -81,7 +81,7 @@ resource "aws_s3_bucket_policy" "spa" {
 
 resource "aws_s3_bucket" "qr_assets" {
   bucket = "${var.project_name}-qr-${random_id.suffix.hex}"
-  
+
   tags = {
     Name = "${var.project_name}-qr-assets-bucket"
   }
@@ -89,7 +89,7 @@ resource "aws_s3_bucket" "qr_assets" {
 
 resource "aws_s3_bucket_versioning" "qr_assets" {
   bucket = aws_s3_bucket.qr_assets.id
-  
+
   versioning_configuration {
     status = "Enabled"
   }
@@ -97,7 +97,7 @@ resource "aws_s3_bucket_versioning" "qr_assets" {
 
 resource "aws_s3_bucket_server_side_encryption_configuration" "qr_assets" {
   bucket = aws_s3_bucket.qr_assets.id
-  
+
   rule {
     apply_server_side_encryption_by_default {
       sse_algorithm = "AES256"
@@ -107,7 +107,7 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "qr_assets" {
 
 resource "aws_s3_bucket_public_access_block" "qr_assets" {
   bucket = aws_s3_bucket.qr_assets.id
-  
+
   block_public_acls       = true
   block_public_policy     = true
   ignore_public_acls      = true
@@ -117,11 +117,12 @@ resource "aws_s3_bucket_public_access_block" "qr_assets" {
 # Lifecycle rule to clean up old QR code versions
 resource "aws_s3_bucket_lifecycle_configuration" "qr_assets" {
   bucket = aws_s3_bucket.qr_assets.id
-  
+
   rule {
+    filter {}
     id     = "cleanup-old-versions"
     status = "Enabled"
-    
+
     noncurrent_version_expiration {
       noncurrent_days = 30
     }
@@ -131,7 +132,7 @@ resource "aws_s3_bucket_lifecycle_configuration" "qr_assets" {
 # CORS configuration for presigned URL downloads
 resource "aws_s3_bucket_cors_configuration" "qr_assets" {
   bucket = aws_s3_bucket.qr_assets.id
-  
+
   cors_rule {
     allowed_headers = ["*"]
     allowed_methods = ["GET", "HEAD"]

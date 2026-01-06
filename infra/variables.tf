@@ -89,10 +89,33 @@ variable "tags" {
   default     = {}
 }
 
+variable "stripe_secret_key" {
+  type      = string
+  sensitive = true
+}
+
+variable "stripe_pro_price_id" {
+  description = "Stripe Price ID for the paid plan (Starter/Pro)"
+  type        = string
+  sensitive   = true
+}
+
+
+variable "stripe_webhook_secret" {
+  type      = string
+  sensitive = true
+}
+
+variable "app_url" {
+  type    = string
+  default = "https://app.linkharbour.io"
+}
+
+
 locals {
   app_domain   = "${var.app_subdomain}.${var.domain_name}"
   short_domain = "${var.short_subdomain}.${var.domain_name}"
-  
+
   common_tags = merge(var.tags, {
     Project     = var.project_name
     Environment = var.environment

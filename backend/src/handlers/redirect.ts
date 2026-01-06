@@ -1,183 +1,163 @@
-// Redirect Handler - Public, must be FAST
-// This Lambda handles the public redirect endpoint for short links
-
-import type { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from 'aws-lambda';
-import { getLinkBySlug, recordClickEvent, incrementClickCount } from '../lib/dynamodb.js';
+import type {
+  APIGatewayProxyEventV2,
+  APIGatewayProxyResultV2,
+} from "aws-lambda";
+import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import {
-  redirectResponse,
-  errorResponse,
-  hashIP,
-  parseDevice,
-  parseCountry,
-  logger
-} from '../lib/utils.js';
-import { v4 as uuidv4 } from 'uuid';
+  DynamoDBDocumentClient,
+  GetCommand,
+  QueryCommand,
+  PutCommand,
+} from "@aws-sdk/lib-dynamodb";
+import { randomUUID } from "crypto";
 
-/**
- * API Gateway headers are typed as Record<string, string | undefined>.
- * Some utils expect Record<string, string>, so we normalize by dropping undefined values.
- */
-function normalizeHeaders(
-  headers: APIGatewayProxyEventV2['headers'] | undefined
-): Record<string, string> {
-  if (!headers) return {};
-  const entries = Object.entries(headers).filter(([, v]) => typeof v === 'string');
-  return Object.fromEntries(entries) as Record<string, string>;
+const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({}));
+
+const LINKS_TABLE = process.env.LINKS_TABLE!;
+const ANALYTICS_TABLE = process.env.ANALYTICS_TABLE!;
+const SLUG_GSI = process.env.SLUG_GSI || "slug-index"; // only used if your table uses a GSI
+
+function html(statusCode: number, title: string, message: string) {
+  return {
+    statusCode,
+    headers: { "content-type": "text/html; charset=utf-8" },
+    body: `<!doctype html><html><head><meta charset="utf-8"><title>${title}</title></head><body style="font-family:system-ui;padding:40px;max-width:720px;margin:auto">
+      <h1>${title}</h1><p>${message}</p></body></html>`,
+  };
 }
 
-export async function handler(event: APIGatewayProxyEventV2): Promise<APIGatewayProxyResultV2> { ... }
-  const startTime = Date.now();
+function isExpired(expiresAt?: string | number | null) {
+  if (!expiresAt) return false;
+  const ts =
+    typeof expiresAt === "number"
+      ? expiresAt
+      : Number.isFinite(Number(expiresAt))
+      ? Number(expiresAt)
+      : Date.parse(String(expiresAt));
+  if (!Number.isFinite(ts)) return false;
+  return Date.now() > ts;
+}
+
+// Try to resolve a link by slug using either:
+// A) PK = slug (GetItem)
+// B) PK = link_id with GSI on slug (Query on SLUG_GSI)
+async function getLinkBySlug(slug: string) {
+  // A) Try GetItem where the partition key is "slug"
+  try {
+    const r = await ddb.send(
+      new GetCommand({
+        TableName: LINKS_TABLE,
+        Key: { slug },
+      })
+    );
+    if (r.Item) return r.Item;
+  } catch {
+    // ignore; table might not have pk=slug
+  }
+
+  // B) Try GSI query (common: slug-index with pk=slug)
+  try {
+    const q = await ddb.send(
+      new QueryCommand({
+        TableName: LINKS_TABLE,
+        IndexName: SLUG_GSI,
+        KeyConditionExpression: "#s = :slug",
+        ExpressionAttributeNames: { "#s": "slug" },
+        ExpressionAttributeValues: { ":slug": slug },
+        Limit: 1,
+      })
+    );
+    if (q.Items && q.Items.length > 0) return q.Items[0];
+  } catch {
+    // ignore; index may not exist or named differently
+  }
+
+  return null;
+}
+
+async function writeClickEvent(params: {
+  slug: string;
+  link_id?: string;
+  owner_user_id?: string;
+  referrer?: string;
+  user_agent?: string;
+}) {
+  // Best-effort click logging (don’t block redirect if this fails)
+  try {
+    const now = Date.now();
+    const item = {
+      event_id: randomUUID(),
+      ts: now,
+      slug: params.slug,
+      link_id: params.link_id || null,
+      owner_user_id: params.owner_user_id || null,
+      referrer: params.referrer || null,
+      ua: params.user_agent || null,
+    };
+
+    await ddb.send(
+      new PutCommand({
+        TableName: ANALYTICS_TABLE,
+        Item: item,
+      })
+    );
+  } catch {
+    // swallow
+  }
+}
+
+export async function handler(
+  event: APIGatewayProxyEventV2
+): Promise<APIGatewayProxyResultV2> {
   const slug = event.pathParameters?.slug;
 
-  logger.info('Redirect request', { slug, path: event.rawPath });
-
   if (!slug) {
-    return errorResponse(400, 'BAD_REQUEST', 'Slug is required');
+    return html(400, "Bad Request", "Missing slug.");
   }
 
-  try {
-    // Get link from DynamoDB
-    const link = await getLinkBySlug(slug);
+  const link = await getLinkBySlug(slug);
 
-    if (!link) {
-      logger.warn('Link not found', { slug });
-      return {
-        statusCode: 404,
-        headers: {
-          'Content-Type': 'text/html',
-          'Cache-Control': 'no-cache',
-        },
-        body: `
-          <!DOCTYPE html>
-          <html>
-            <head>
-              <title>Link Not Found - LinkHarbour</title>
-              <meta name="robots" content="noindex">
-              <style>
-                body { font-family: system-ui, sans-serif; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; background: #0f172a; color: #e2e8f0; }
-                .container { text-align: center; padding: 2rem; }
-                h1 { font-size: 4rem; margin: 0; color: #f97316; }
-                p { font-size: 1.25rem; color: #94a3b8; }
-                a { color: #f97316; text-decoration: none; }
-              </style>
-            </head>
-            <body>
-              <div class="container">
-                <h1>404</h1>
-                <p>This short link doesn't exist.</p>
-                <p><a href="https://${process.env.APP_DOMAIN || 'app.linkharbour.io'}">Create your own short links →</a></p>
-              </div>
-            </body>
-          </html>
-        `,
-      };
-    }
-
-    // Check if link is enabled
-    if (!link.enabled) {
-      logger.warn('Link disabled', { slug, linkId: link.id });
-      return {
-        statusCode: 410,
-        headers: {
-          'Content-Type': 'text/html',
-          'Cache-Control': 'no-cache',
-        },
-        body: `
-          <!DOCTYPE html>
-          <html>
-            <head>
-              <title>Link Disabled - LinkHarbour</title>
-              <meta name="robots" content="noindex">
-              <style>
-                body { font-family: system-ui, sans-serif; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; background: #0f172a; color: #e2e8f0; }
-                .container { text-align: center; padding: 2rem; }
-                h1 { font-size: 2rem; margin: 0 0 1rem; color: #f97316; }
-                p { color: #94a3b8; }
-              </style>
-            </head>
-            <body>
-              <div class="container">
-                <h1>Link Disabled</h1>
-                <p>This short link has been disabled by its owner.</p>
-              </div>
-            </body>
-          </html>
-        `,
-      };
-    }
-
-    // Check if link is expired
-    if (link.expiresAt && link.expiresAt < Date.now()) {
-      logger.warn('Link expired', { slug, linkId: link.id, expiresAt: link.expiresAt });
-      return {
-        statusCode: 410,
-        headers: {
-          'Content-Type': 'text/html',
-          'Cache-Control': 'no-cache',
-        },
-        body: `
-          <!DOCTYPE html>
-          <html>
-            <head>
-              <title>Link Expired - LinkHarbour</title>
-              <meta name="robots" content="noindex">
-              <style>
-                body { font-family: system-ui, sans-serif; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; background: #0f172a; color: #e2e8f0; }
-                .container { text-align: center; padding: 2rem; }
-                h1 { font-size: 2rem; margin: 0 0 1rem; color: #f97316; }
-                p { color: #94a3b8; }
-              </style>
-            </head>
-            <body>
-              <div class="container">
-                <h1>Link Expired</h1>
-                <p>This short link has expired.</p>
-              </div>
-            </body>
-          </html>
-        `,
-      };
-    }
-
-    // Record analytics asynchronously (don't wait for it)
-    if (!link.privacyMode) {
-      const headers = normalizeHeaders(event.headers);
-
-      // Fire and forget - don't block the redirect
-      Promise.all([
-        recordClickEvent({
-          eventId: uuidv4(),
-          linkId: link.id,
-          slug: link.slug,
-          userId: link.userId,
-          timestamp: Date.now(),
-          referrer: headers['referer'] || headers['Referer'],
-          userAgent: headers['user-agent'] || headers['User-Agent'],
-          country: parseCountry(headers),
-          device: parseDevice(headers['user-agent'] || headers['User-Agent'] || ''),
-          ipHash: hashIP(event.requestContext?.http?.sourceIp || ''),
-        }),
-        incrementClickCount(link.userId, link.id),
-      ]).catch((err) => {
-        logger.error('Failed to record analytics', err);
-      });
-    }
-
-    const duration = Date.now() - startTime;
-    logger.info('Redirect successful', {
-      slug,
-      linkId: link.id,
-      redirectType: link.redirectType,
-      duration
-    });
-
-    // Return redirect response
-    // Use shorter cache for 302 (temporary), longer for 301 (permanent)
-    const cacheSeconds = link.redirectType === 301 ? 300 : 60;
-
-    return redirectResponse(link.longUrl, link.redirectType, cacheSeconds);
-  } catch (error) {
-    logger.error('Redirect error', error as Error, { slug });
-    return errorResponse(500, 'INTERNAL_ERROR', 'An error occurred processing your request');
+  if (!link) {
+    return html(404, "Not Found", `Short link "${slug}" does not exist.`);
   }
+
+  // support a few field name variants (depending on your write handler)
+  const longUrl: string | undefined =
+    link.long_url || link.longUrl || link.destination || link.url;
+
+  if (!longUrl) {
+    return html(500, "Server Error", "Link record is missing destination URL.");
+  }
+
+  const enabled =
+    link.enabled === undefined || link.enabled === null ? true : !!link.enabled;
+
+  if (!enabled) {
+    return html(410, "Link Disabled", "This short link has been disabled.");
+  }
+
+  if (isExpired(link.expires_at ?? link.expiresAt ?? null)) {
+    return html(410, "Link Expired", "This short link has expired.");
+  }
+
+  const redirectType = Number(link.redirect_type || link.redirectType || 302);
+  const statusCode = redirectType === 301 ? 301 : 302;
+
+  // Best-effort analytics
+  await writeClickEvent({
+    slug,
+    link_id: link.link_id || link.linkId,
+    owner_user_id: link.owner_user_id || link.ownerUserId,
+    referrer: event.headers?.referer || event.headers?.referrer,
+    user_agent: event.headers?.["user-agent"],
+  });
+
+  return {
+    statusCode,
+    headers: {
+      Location: longUrl,
+      "Cache-Control": "no-cache",
+    },
+    body: "",
+  };
 }

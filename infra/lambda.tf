@@ -7,7 +7,7 @@
 
 resource "aws_iam_role" "lambda_exec" {
   name = "${var.project_name}-lambda-exec-${var.environment}"
-  
+
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
@@ -32,7 +32,7 @@ resource "aws_iam_role_policy_attachment" "lambda_logs" {
 resource "aws_iam_role_policy" "lambda_dynamodb" {
   name = "${var.project_name}-lambda-dynamodb"
   role = aws_iam_role.lambda_exec.id
-  
+
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
@@ -54,7 +54,10 @@ resource "aws_iam_role_policy" "lambda_dynamodb" {
           aws_dynamodb_table.analytics.arn,
           "${aws_dynamodb_table.analytics.arn}/index/*",
           aws_dynamodb_table.aggregates.arn,
-          "${aws_dynamodb_table.aggregates.arn}/index/*"
+          "${aws_dynamodb_table.aggregates.arn}/index/*",
+
+          aws_dynamodb_table.billing.arn,
+          "${aws_dynamodb_table.billing.arn}/index/*"
         ]
       }
     ]
@@ -65,7 +68,7 @@ resource "aws_iam_role_policy" "lambda_dynamodb" {
 resource "aws_iam_role_policy" "lambda_s3" {
   name = "${var.project_name}-lambda-s3"
   role = aws_iam_role.lambda_exec.id
-  
+
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
@@ -99,21 +102,21 @@ resource "aws_lambda_function" "redirect" {
   role          = aws_iam_role.lambda_exec.arn
   handler       = "redirect.handler"
   runtime       = "nodejs20.x"
-  
+
   filename         = "${path.module}/../backend/dist/redirect.zip"
   source_code_hash = filebase64sha256("${path.module}/../backend/dist/redirect.zip")
-  
-  memory_size = 128  # Keep low for fast cold starts
+
+  memory_size = 128 # Keep low for fast cold starts
   timeout     = var.redirect_lambda_timeout
-  
+
   environment {
     variables = {
-      LINKS_TABLE = aws_dynamodb_table.links.name
+      LINKS_TABLE     = aws_dynamodb_table.links.name
       ANALYTICS_TABLE = aws_dynamodb_table.analytics.name
-      ENVIRONMENT = var.environment
+      ENVIRONMENT     = var.environment
     }
   }
-  
+
   tags = {
     Name = "${var.project_name}-redirect-lambda"
   }
@@ -125,13 +128,13 @@ resource "aws_lambda_function" "links_api" {
   role          = aws_iam_role.lambda_exec.arn
   handler       = "links.handler"
   runtime       = "nodejs20.x"
-  
+
   filename         = "${path.module}/../backend/dist/links.zip"
   source_code_hash = filebase64sha256("${path.module}/../backend/dist/links.zip")
-  
+
   memory_size = var.lambda_memory_size
   timeout     = var.lambda_timeout
-  
+
   environment {
     variables = {
       LINKS_TABLE      = aws_dynamodb_table.links.name
@@ -142,7 +145,7 @@ resource "aws_lambda_function" "links_api" {
       ENVIRONMENT      = var.environment
     }
   }
-  
+
   tags = {
     Name = "${var.project_name}-links-api-lambda"
   }
@@ -154,13 +157,13 @@ resource "aws_lambda_function" "analytics_api" {
   role          = aws_iam_role.lambda_exec.arn
   handler       = "analytics.handler"
   runtime       = "nodejs20.x"
-  
+
   filename         = "${path.module}/../backend/dist/analytics.zip"
   source_code_hash = filebase64sha256("${path.module}/../backend/dist/analytics.zip")
-  
+
   memory_size = var.lambda_memory_size
   timeout     = var.lambda_timeout
-  
+
   environment {
     variables = {
       LINKS_TABLE      = aws_dynamodb_table.links.name
@@ -169,9 +172,74 @@ resource "aws_lambda_function" "analytics_api" {
       ENVIRONMENT      = var.environment
     }
   }
-  
+
   tags = {
     Name = "${var.project_name}-analytics-api-lambda"
+  }
+}
+# Billing API Handler - Authenticated billing operations (checkout + portal)
+resource "aws_lambda_function" "billing_api" {
+  function_name = "${var.project_name}-billing-api-${var.environment}"
+  role          = aws_iam_role.lambda_exec.arn
+  handler       = "billing_api.handler"
+  runtime       = "nodejs20.x"
+
+  filename         = "${path.module}/../backend/dist/billing_api.zip"
+  source_code_hash = filebase64sha256("${path.module}/../backend/dist/billing_api.zip")
+
+  memory_size = var.lambda_memory_size
+  timeout     = var.lambda_timeout
+
+  environment {
+    variables = {
+      LINKS_TABLE      = aws_dynamodb_table.links.name
+      ANALYTICS_TABLE  = aws_dynamodb_table.analytics.name
+      AGGREGATES_TABLE = aws_dynamodb_table.aggregates.name
+      ENVIRONMENT      = var.environment
+
+      # Stripe
+      STRIPE_SECRET_KEY     = var.stripe_secret_key
+      STRIPE_PRO_PRICE_ID   = var.stripe_pro_price_id
+      STRIPE_WEBHOOK_SECRET = var.stripe_webhook_secret
+
+      # Frontend URLs used for redirects after checkout/portal
+      APP_DOMAIN = local.app_domain
+    }
+  }
+
+  tags = {
+    Name = "${var.project_name}-billing-api-lambda"
+  }
+}
+
+
+# Stripe Webhook Handler - Public endpoint, verifies Stripe signature
+resource "aws_lambda_function" "stripe_webhook" {
+  function_name = "${var.project_name}-stripe-webhook-${var.environment}"
+  role          = aws_iam_role.lambda_exec.arn
+  handler       = "stripe_webhook.handler"
+  runtime       = "nodejs20.x"
+
+  filename         = "${path.module}/../backend/dist/stripe_webhook.zip"
+  source_code_hash = filebase64sha256("${path.module}/../backend/dist/stripe_webhook.zip")
+
+  memory_size = var.lambda_memory_size
+  timeout     = var.lambda_timeout
+
+  environment {
+    variables = {
+      LINKS_TABLE      = aws_dynamodb_table.links.name
+      ANALYTICS_TABLE  = aws_dynamodb_table.analytics.name
+      AGGREGATES_TABLE = aws_dynamodb_table.aggregates.name
+      ENVIRONMENT      = var.environment
+
+      STRIPE_SECRET_KEY     = var.stripe_secret_key
+      STRIPE_WEBHOOK_SECRET = var.stripe_webhook_secret
+    }
+  }
+
+  tags = {
+    Name = "${var.project_name}-stripe-webhook-lambda"
   }
 }
 
@@ -193,3 +261,13 @@ resource "aws_cloudwatch_log_group" "analytics_api" {
   name              = "/aws/lambda/${aws_lambda_function.analytics_api.function_name}"
   retention_in_days = 14
 }
+resource "aws_cloudwatch_log_group" "billing_api" {
+  name              = "/aws/lambda/${aws_lambda_function.billing_api.function_name}"
+  retention_in_days = 14
+}
+
+resource "aws_cloudwatch_log_group" "stripe_webhook" {
+  name              = "/aws/lambda/${aws_lambda_function.stripe_webhook.function_name}"
+  retention_in_days = 14
+}
+

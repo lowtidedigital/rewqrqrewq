@@ -12,6 +12,13 @@ project_name    = "shortfuse"
 app_subdomain   = "app"
 short_subdomain = "s"
 
+stripe_price_starter = "price_1SmQWQRd9hGS6kHhuXA5XkpL"
+app_url              = "https://app.linkharbour.io"
+
+# put your real values here (keep private)
+stripe_secret_key    = "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"
+stripe_webhook_secret = "whsec_TPcgO6rhZkzNBDC1wqfxrGWCbcp1Hktb"
+
 # Lambda configuration
 lambda_memory_size      = 256
 lambda_timeout          = 10
