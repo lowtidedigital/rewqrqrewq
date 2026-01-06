@@ -41,8 +41,14 @@ dist/
 .env.local
 .env.*
 
-infra/terraform.tfvars
+# Terraform
+infra/.terraform/
 infra/terraform.tfstate
 infra/terraform.tfstate.backup
-infra/.terraform/
-infra/*.tfstate*
+infra/*.tfvars
+infra/*.tfvars.json
+
+# Env
+.env
+.env.*
+
