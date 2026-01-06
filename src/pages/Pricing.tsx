@@ -161,10 +161,10 @@ const Pricing = () => {
               <div className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center">
                 <Anchor className="w-5 h-5 text-primary-foreground" />
               </div>
-              <span className="font-display font-bold text-xl">LinkHarbour</span>
+              <span className="font-display font-bold text-xl">Link Harbour</span>
             </div>
             <p className="text-muted-foreground text-sm">
-              © 2025 LinkHarbour. Built with ❤️ on AWS.
+              © 2025 Link Harbour. Built with ❤️ on AWS.
             </p>
           </div>
         </div>

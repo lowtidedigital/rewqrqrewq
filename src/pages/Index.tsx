@@ -226,7 +226,7 @@ const Index = () => {
                 Ready to Shorten Your First Link?
               </h2>
               <p className="text-xl text-primary-foreground/80 mb-8 max-w-xl mx-auto">
-                Join thousands of marketers and developers who trust LinkHarbour for their link management.
+                Join thousands of marketers and developers who trust Link Harbour for their link management.
               </p>
               <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
                 <Button variant="glass" size="xl" className="bg-white/20 hover:bg-white/30 text-white border-white/30" asChild>
@@ -257,10 +257,10 @@ const Index = () => {
               <div className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center">
                 <Anchor className="w-5 h-5 text-primary-foreground" />
               </div>
-              <span className="font-display font-bold text-xl">LinkHarbour</span>
+              <span className="font-display font-bold text-xl">Link Harbour</span>
             </div>
             <p className="text-muted-foreground text-sm">
-              © 2025 LinkHarbour. Built with ❤️ on AWS.
+              © 2025 Link Harbour. Built with ❤️ on AWS.
             </p>
           </div>
         </div>
