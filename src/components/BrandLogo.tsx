@@ -11,23 +11,23 @@ interface BrandLogoProps {
 
 const variantConfig = {
   sidebar: {
-    imageClass: "h-14 max-w-[200px]",
-    container: "px-2 py-2",
+    imageClass: "h-12 max-w-[180px]",
+    container: "px-3 py-3",
     showContainer: true,
   },
   drawer: {
-    imageClass: "h-16 max-w-[220px]",
+    imageClass: "h-14 max-w-[200px]",
     container: "px-3 py-3",
     showContainer: true,
   },
   header: {
-    imageClass: "h-10 max-w-[160px]",
+    imageClass: "h-9 max-w-[150px]",
     container: "",
     showContainer: false,
   },
   collapsed: {
-    imageClass: "h-10 w-10",
-    container: "p-1",
+    imageClass: "h-9 w-9",
+    container: "p-2",
     showContainer: true,
   },
 };
