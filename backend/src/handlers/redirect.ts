@@ -6,16 +6,40 @@ import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import {
   DynamoDBDocumentClient,
   GetCommand,
-  QueryCommand,
   PutCommand,
+  UpdateCommand,
 } from "@aws-sdk/lib-dynamodb";
 import { randomUUID } from "crypto";
 
-const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({}));
+const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({}), {
+  marshallOptions: { removeUndefinedValues: true },
+});
 
 const LINKS_TABLE = process.env.LINKS_TABLE!;
 const ANALYTICS_TABLE = process.env.ANALYTICS_TABLE!;
-const SLUG_GSI = process.env.SLUG_GSI || "slug-index"; // only used if your table uses a GSI
+const AGGREGATES_TABLE = process.env.AGGREGATES_TABLE!;
+const LOG_LEVEL = process.env.LOG_LEVEL || 'info';
+
+// Structured logger
+const logger = {
+  debug: (msg: string, data?: Record<string, any>) => {
+    if (LOG_LEVEL === 'debug') {
+      console.log(JSON.stringify({ level: 'DEBUG', message: msg, ...data, timestamp: new Date().toISOString() }));
+    }
+  },
+  info: (msg: string, data?: Record<string, any>) => {
+    console.log(JSON.stringify({ level: 'INFO', message: msg, ...data, timestamp: new Date().toISOString() }));
+  },
+  warn: (msg: string, data?: Record<string, any>) => {
+    console.warn(JSON.stringify({ level: 'WARN', message: msg, ...data, timestamp: new Date().toISOString() }));
+  },
+  error: (msg: string, error?: Error, data?: Record<string, any>) => {
+    console.error(JSON.stringify({ 
+      level: 'ERROR', message: msg, error: error?.message, stack: error?.stack, 
+      ...data, timestamp: new Date().toISOString() 
+    }));
+  },
+};
 
 function html(statusCode: number, title: string, message: string) {
   return {
@@ -38,125 +62,278 @@ function isExpired(expiresAt?: string | number | null) {
   return Date.now() > ts;
 }
 
-// Try to resolve a link by slug using either:
-// A) PK = slug (GetItem)
-// B) PK = link_id with GSI on slug (Query on SLUG_GSI)
-async function getLinkBySlug(slug: string) {
-  // A) Try GetItem where the partition key is "slug"
-  try {
-    const r = await ddb.send(
-      new GetCommand({
-        TableName: LINKS_TABLE,
-        Key: { slug },
-      })
-    );
-    if (r.Item) return r.Item;
-  } catch {
-    // ignore; table might not have pk=slug
+function parseDevice(userAgent?: string): string {
+  if (!userAgent) return 'unknown';
+  const ua = userAgent.toLowerCase();
+  if (/mobile|android|iphone|ipad|ipod|blackberry|windows phone/i.test(ua)) {
+    if (/tablet|ipad/i.test(ua)) return 'tablet';
+    return 'mobile';
   }
-
-  // B) Try GSI query (common: slug-index with pk=slug)
-  try {
-    const q = await ddb.send(
-      new QueryCommand({
-        TableName: LINKS_TABLE,
-        IndexName: SLUG_GSI,
-        KeyConditionExpression: "#s = :slug",
-        ExpressionAttributeNames: { "#s": "slug" },
-        ExpressionAttributeValues: { ":slug": slug },
-        Limit: 1,
-      })
-    );
-    if (q.Items && q.Items.length > 0) return q.Items[0];
-  } catch {
-    // ignore; index may not exist or named differently
+  if (/bot|crawler|spider|slurp|googlebot|bingbot/i.test(ua)) {
+    return 'bot';
   }
-
-  return null;
+  return 'desktop';
 }
 
+function parseCountry(headers: Record<string, string>): string {
+  return headers['cloudfront-viewer-country'] || 
+         headers['cf-ipcountry'] || 
+         'unknown';
+}
+
+// Get link by slug using the single-table design
+// PK: SLUG#{slug}, SK: METADATA -> returns linkId + userId
+// Then fetch full link from PK: USER#{userId}, SK: LINK#{linkId}
+async function getLinkBySlug(slug: string) {
+  logger.debug('Looking up slug', { slug, table: LINKS_TABLE });
+
+  // First: Get slug mapping
+  const slugResult = await ddb.send(
+    new GetCommand({
+      TableName: LINKS_TABLE,
+      Key: {
+        PK: `SLUG#${slug}`,
+        SK: 'METADATA',
+      },
+    })
+  );
+
+  if (!slugResult.Item) {
+    logger.debug('Slug not found in mapping', { slug });
+    return null;
+  }
+
+  const { linkId, userId } = slugResult.Item;
+  logger.debug('Slug mapping found', { slug, linkId, userId });
+
+  // Second: Get full link data
+  const linkResult = await ddb.send(
+    new GetCommand({
+      TableName: LINKS_TABLE,
+      Key: {
+        PK: `USER#${userId}`,
+        SK: `LINK#${linkId}`,
+      },
+    })
+  );
+
+  if (!linkResult.Item) {
+    logger.warn('Link not found after slug mapping', { slug, linkId, userId });
+    return null;
+  }
+
+  return linkResult.Item;
+}
+
+// Write click event with proper composite keys matching analytics handler expectations
 async function writeClickEvent(params: {
   slug: string;
-  link_id?: string;
-  owner_user_id?: string;
+  linkId: string;
+  userId: string;
   referrer?: string;
-  user_agent?: string;
+  userAgent?: string;
+  country?: string;
 }) {
-  // Best-effort click logging (don’t block redirect if this fails)
-  try {
-    const now = Date.now();
-    const item = {
-      event_id: randomUUID(),
-      ts: now,
-      slug: params.slug,
-      link_id: params.link_id || null,
-      owner_user_id: params.owner_user_id || null,
-      referrer: params.referrer || null,
-      ua: params.user_agent || null,
-    };
+  const now = Date.now();
+  const eventId = randomUUID();
+  const date = new Date(now);
+  const monthKey = `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}`;
+  const dayKey = date.toISOString().split('T')[0];
+  const device = parseDevice(params.userAgent);
 
+  logger.debug('Writing click event', { 
+    linkId: params.linkId, 
+    slug: params.slug,
+    userId: params.userId,
+    eventId,
+    monthKey,
+    dayKey,
+  });
+
+  try {
+    // 1. Write raw event to analytics table with proper keys
     await ddb.send(
       new PutCommand({
         TableName: ANALYTICS_TABLE,
-        Item: item,
+        Item: {
+          PK: `LINK#${params.linkId}#${monthKey}`,
+          SK: `TS#${now}#${eventId}`,
+          GSI1PK: `USER#${params.userId}#${monthKey}`,
+          GSI1SK: `TS#${now}`,
+          eventId,
+          linkId: params.linkId,
+          slug: params.slug,
+          userId: params.userId,
+          timestamp: now,
+          referrer: params.referrer || null,
+          userAgent: params.userAgent || null,
+          country: params.country || null,
+          device,
+          ttl: Math.floor(Date.now() / 1000) + (365 * 24 * 60 * 60 * 2), // 2 years
+        },
       })
     );
-  } catch {
-    // swallow
+    logger.debug('Click event written to analytics table', { eventId });
+
+    // 2. Update daily aggregate
+    await ddb.send(
+      new UpdateCommand({
+        TableName: AGGREGATES_TABLE,
+        Key: {
+          PK: `LINK#${params.linkId}`,
+          SK: `AGG#daily#${dayKey}`,
+        },
+        UpdateExpression: 'SET clicks = if_not_exists(clicks, :zero) + :inc, lastUpdated = :now',
+        ExpressionAttributeValues: {
+          ':zero': 0,
+          ':inc': 1,
+          ':now': now,
+        },
+      })
+    );
+    logger.debug('Daily aggregate updated', { linkId: params.linkId, dayKey });
+
+    // 3. Update total aggregate
+    await ddb.send(
+      new UpdateCommand({
+        TableName: AGGREGATES_TABLE,
+        Key: {
+          PK: `LINK#${params.linkId}`,
+          SK: 'AGG#total',
+        },
+        UpdateExpression: 'SET clicks = if_not_exists(clicks, :zero) + :inc, lastUpdated = :now',
+        ExpressionAttributeValues: {
+          ':zero': 0,
+          ':inc': 1,
+          ':now': now,
+        },
+      })
+    );
+    logger.debug('Total aggregate updated', { linkId: params.linkId });
+
+    // 4. Update user monthly aggregate
+    await ddb.send(
+      new UpdateCommand({
+        TableName: AGGREGATES_TABLE,
+        Key: {
+          PK: `USER#${params.userId}`,
+          SK: `AGG#monthly#${monthKey}`,
+        },
+        UpdateExpression: 'SET clicks = if_not_exists(clicks, :zero) + :inc, lastUpdated = :now',
+        ExpressionAttributeValues: {
+          ':zero': 0,
+          ':inc': 1,
+          ':now': now,
+        },
+      })
+    );
+    logger.debug('User monthly aggregate updated', { userId: params.userId, monthKey });
+
+    // 5. Update click count on link record
+    await ddb.send(
+      new UpdateCommand({
+        TableName: LINKS_TABLE,
+        Key: {
+          PK: `USER#${params.userId}`,
+          SK: `LINK#${params.linkId}`,
+        },
+        UpdateExpression: 'SET clickCount = if_not_exists(clickCount, :zero) + :inc',
+        ExpressionAttributeValues: {
+          ':zero': 0,
+          ':inc': 1,
+        },
+      })
+    );
+    logger.debug('Link clickCount incremented', { linkId: params.linkId });
+
+    logger.info('Click event recorded successfully', { 
+      eventId, 
+      linkId: params.linkId, 
+      slug: params.slug 
+    });
+
+  } catch (err) {
+    logger.error('Failed to write click event', err as Error, { 
+      linkId: params.linkId, 
+      slug: params.slug 
+    });
+    // Don't throw - redirect should still work even if analytics fails
   }
 }
 
 export async function handler(
   event: APIGatewayProxyEventV2
 ): Promise<APIGatewayProxyResultV2> {
+  const requestId = event.requestContext?.requestId || randomUUID();
   const slug = event.pathParameters?.slug;
 
+  logger.info('Redirect request', { requestId, slug, method: event.requestContext?.http?.method });
+
   if (!slug) {
+    logger.warn('Missing slug', { requestId });
     return html(400, "Bad Request", "Missing slug.");
   }
 
   const link = await getLinkBySlug(slug);
 
   if (!link) {
+    logger.info('Link not found', { requestId, slug });
     return html(404, "Not Found", `Short link "${slug}" does not exist.`);
   }
 
-  // support a few field name variants (depending on your write handler)
-  const longUrl: string | undefined =
-    link.long_url || link.longUrl || link.destination || link.url;
+  const linkId = link.id || link.linkId;
+  const userId = link.userId || link.owner_user_id;
+  const longUrl = link.longUrl || link.long_url || link.destination || link.url;
+  const enabled = link.enabled === undefined || link.enabled === null ? true : !!link.enabled;
+  const expiresAt = link.expiresAt ?? link.expires_at ?? null;
+
+  logger.debug('Link resolved', { 
+    requestId, 
+    slug, 
+    linkId, 
+    userId, 
+    enabled, 
+    hasDestination: !!longUrl,
+  });
 
   if (!longUrl) {
+    logger.error('Link missing destination URL', undefined, { requestId, linkId });
     return html(500, "Server Error", "Link record is missing destination URL.");
   }
 
-  const enabled =
-    link.enabled === undefined || link.enabled === null ? true : !!link.enabled;
-
+  // Disabled links: 410 Gone, NO analytics
   if (!enabled) {
+    logger.info('Link disabled', { requestId, slug, linkId });
     return html(410, "Link Disabled", "This short link has been disabled.");
   }
 
-  if (isExpired(link.expires_at ?? link.expiresAt ?? null)) {
+  // Expired links: 410 Gone, NO analytics
+  if (isExpired(expiresAt)) {
+    logger.info('Link expired', { requestId, slug, linkId, expiresAt });
     return html(410, "Link Expired", "This short link has expired.");
   }
 
-  const redirectType = Number(link.redirect_type || link.redirectType || 302);
+  const redirectType = Number(link.redirectType || link.redirect_type || 302);
   const statusCode = redirectType === 301 ? 301 : 302;
+  const headers = event.headers || {};
 
-  // Best-effort analytics
-  await writeClickEvent({
+  // Record analytics (async, don't block redirect)
+  writeClickEvent({
     slug,
-    link_id: link.link_id || link.linkId,
-    owner_user_id: link.owner_user_id || link.ownerUserId,
-    referrer: event.headers?.referer || event.headers?.referrer,
-    user_agent: event.headers?.["user-agent"],
+    linkId,
+    userId,
+    referrer: headers['referer'] || headers['referrer'],
+    userAgent: headers['user-agent'],
+    country: parseCountry(headers),
   });
+
+  logger.info('Redirect successful', { requestId, slug, linkId, statusCode, destination: longUrl });
 
   return {
     statusCode,
     headers: {
       Location: longUrl,
-      "Cache-Control": "no-cache",
+      "Cache-Control": "no-cache, no-store, must-revalidate",
     },
     body: "",
   };
