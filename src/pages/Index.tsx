@@ -66,7 +66,7 @@ const features = [
 const stats = [
   { value: "99.99%", label: "Uptime" },
   { value: "<50ms", label: "Redirect Latency" },
-  { value: "1B+", label: "Links Shortened" },
+  { value: "8M+", label: "Links Shortened" },
   { value: "150+", label: "Countries Served" },
 ];
 
@@ -91,16 +91,6 @@ const Index = () => {
             transition={{ duration: 0.6 }}
             className="text-center max-w-4xl mx-auto"
           >
-            {/* Badge */}
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ duration: 0.4, delay: 0.1 }}
-              className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 border border-primary/30 text-primary text-sm font-medium mb-8"
-            >
-              <Anchor className="w-4 h-4" />
-              Powered by AWS Serverless
-            </motion.div>
 
             {/* Headline */}
             <h1 className="font-display text-5xl md:text-7xl font-bold mb-6 leading-tight">
@@ -158,6 +148,17 @@ const Index = () => {
                 </div>
                 <p className="text-sm text-muted-foreground">Loved by 50,000+ marketers</p>
               </div>
+            </motion.div>
+
+            {/* AWS Badge - moved to bottom of hero */}
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ duration: 0.4, delay: 0.6 }}
+              className="mt-8 inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 border border-primary/30 text-primary text-sm font-medium"
+            >
+              <Anchor className="w-4 h-4" />
+              Powered by AWS Serverless
             </motion.div>
           </motion.div>
         </div>
