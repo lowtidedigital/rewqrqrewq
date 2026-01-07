@@ -30,6 +30,7 @@ import AnalyticsDocs from "./pages/docs/AnalyticsDocs";
 import SecurityDocs from "./pages/docs/SecurityDocs";
 import FAQ from "./pages/docs/FAQ";
 import Troubleshooting from "./pages/docs/Troubleshooting";
+import ApiDocs from "./pages/docs/ApiDocs";
 
 // Legal pages
 import LegalLayout from "./components/LegalLayout";
@@ -66,6 +67,7 @@ const App = () => (
                   <Route path="security" element={<SecurityDocs />} />
                   <Route path="faq" element={<FAQ />} />
                   <Route path="troubleshooting" element={<Troubleshooting />} />
+                  <Route path="api" element={<ApiDocs />} />
                 </Route>
 
                 {/* Legal routes */}

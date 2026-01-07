@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { Link, useLocation, Outlet } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ChevronRight, Search, Menu, X, Book, Rocket, Link2, BarChart3, Shield, HelpCircle, Wrench } from "lucide-react";
+import { ChevronRight, Search, Menu, X, Book, Rocket, Link2, BarChart3, Shield, HelpCircle, Wrench, Code } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import BrandLogo from "@/components/BrandLogo";
@@ -31,6 +31,7 @@ const docsNavigation: NavSection[] = [
       { title: "Creating Links", href: "/docs/creating-links", icon: Link2 },
       { title: "Analytics", href: "/docs/analytics", icon: BarChart3 },
       { title: "Security", href: "/docs/security", icon: Shield },
+      { title: "API", href: "/docs/api", icon: Code },
     ],
   },
   {
