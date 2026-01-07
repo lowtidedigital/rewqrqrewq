@@ -28,7 +28,7 @@ const Navbar = () => {
             <Link to="/pricing" className="text-muted-foreground hover:text-foreground transition-colors">
               Pricing
             </Link>
-            <Link to="/#docs" className="text-muted-foreground hover:text-foreground transition-colors">
+            <Link to="/docs" className="text-muted-foreground hover:text-foreground transition-colors">
               Docs
             </Link>
           </div>
@@ -76,7 +76,7 @@ const Navbar = () => {
                 Pricing
               </Link>
               <Link
-                to="/#docs"
+                to="/docs"
                 className="text-muted-foreground hover:text-foreground transition-colors"
                 onClick={() => setIsMenuOpen(false)}
               >
