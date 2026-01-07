@@ -1,8 +1,8 @@
 // Plan configuration - Single source of truth for all plan limits and features
 // These MUST match the backend enforcement in Lambda handlers
-// 3-tier model: Free, Starter ($12/mo), Enterprise
+// 3-tier model: Free, Pro ($12/mo), Enterprise
 
-export type PlanName = 'free' | 'starter' | 'enterprise';
+export type PlanName = 'free' | 'pro' | 'enterprise';
 
 export interface PlanConfig {
   name: PlanName;
@@ -13,6 +13,7 @@ export interface PlanConfig {
   trackedClicksMonthly: number;
   retentionDays: number;
   apiAccess: boolean;
+  bulkCreate: boolean; // Can create links in bulk
   customDomains: number;
   features: string[];
 }
@@ -26,6 +27,7 @@ export const PLANS: Record<PlanName, PlanConfig> = {
     trackedClicksMonthly: 1_000,
     retentionDays: 7,
     apiAccess: false,
+    bulkCreate: false,
     customDomains: 0,
     features: [
       '50 short links',
@@ -35,15 +37,16 @@ export const PLANS: Record<PlanName, PlanConfig> = {
       'Basic analytics',
     ],
   },
-  starter: {
-    name: 'starter',
-    displayName: 'Starter',
+  pro: {
+    name: 'pro',
+    displayName: 'Pro',
     price: 12,
     stripePriceId: 'price_1SmQWQRd9hGS6kHhuXA5XkpL',
     maxLinksTotal: 500,
     trackedClicksMonthly: 25_000,
     retentionDays: 90,
-    apiAccess: true, // Starter gets API access
+    apiAccess: true,
+    bulkCreate: true,
     customDomains: 3,
     features: [
       '500 short links',
@@ -52,6 +55,7 @@ export const PLANS: Record<PlanName, PlanConfig> = {
       'QR codes (PNG + SVG)',
       'Custom slugs',
       '3 custom domains',
+      'Bulk link creation',
       'API access',
       'Priority email support',
     ],
@@ -64,13 +68,15 @@ export const PLANS: Record<PlanName, PlanConfig> = {
     trackedClicksMonthly: Infinity,
     retentionDays: Infinity,
     apiAccess: true,
+    bulkCreate: true,
     customDomains: Infinity,
     features: [
       'Unlimited links',
       'Unlimited tracked clicks',
       'Unlimited retention',
-      'All Starter features',
+      'All Pro features',
       'Unlimited custom domains',
+      'Bulk link creation',
       'Custom integrations',
       'SLA guarantee',
       'Dedicated infrastructure',
@@ -92,7 +98,12 @@ export const hasApiAccess = (planName: PlanName): boolean => {
 
 // Check if user is on a paid plan
 export const isPaidPlan = (planName: PlanName): boolean => {
-  return planName === 'starter' || planName === 'enterprise';
+  return planName === 'pro' || planName === 'enterprise';
+};
+
+// Check if user can bulk create links
+export const canBulkCreate = (planName: PlanName): boolean => {
+  return PLANS[planName]?.bulkCreate ?? false;
 };
 
 // Check if user can create more links

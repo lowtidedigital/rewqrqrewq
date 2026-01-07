@@ -55,11 +55,11 @@ const Billing = () => {
         
         // Check if now active
         const isNowActive = subscription?.status === 'active' || subscription?.status === 'trialing';
-        const isNowPaid = subscription?.plan === 'starter' || subscription?.plan === 'enterprise';
+        const isNowPaid = subscription?.plan === 'pro' || subscription?.plan === 'enterprise';
         
         if (isNowActive && isNowPaid) {
           setIsPolling(false);
-          toast.success('Subscription activated! Welcome to Starter.');
+          toast.success('Subscription activated! Welcome to Pro.');
           // Clean up URL
           setSearchParams({});
           return;
@@ -89,7 +89,7 @@ const Billing = () => {
   const handleUpgrade = async () => {
     setIsUpgrading(true);
     try {
-      const { url } = await createCheckoutSession('starter');
+      const { url } = await createCheckoutSession('pro');
       window.location.href = url;
     } catch (error: any) {
       console.error('Checkout error:', error);
@@ -158,7 +158,7 @@ const Billing = () => {
                   <p className="text-sm text-muted-foreground">This usually takes a few seconds.</p>
                 </div>
               </>
-            ) : isActive && (currentPlan === 'starter' || currentPlan === 'enterprise') ? (
+            ) : isActive && (currentPlan === 'pro' || currentPlan === 'enterprise') ? (
               <>
                 <CheckCircle2 className="w-5 h-5 text-primary" />
                 <div>
@@ -288,16 +288,16 @@ const Billing = () => {
               <Sparkles className="w-5 h-5 text-primary" />
             </div>
             <div>
-              <h2 className="font-display text-lg font-semibold">Upgrade to Starter</h2>
+              <h2 className="font-display text-lg font-semibold">Upgrade to Pro</h2>
               <p className="text-sm text-muted-foreground">Unlock API access and more features</p>
             </div>
           </div>
 
           <div className="grid md:grid-cols-2 gap-6">
-            {/* Starter Plan Card */}
+            {/* Pro Plan Card */}
             <div className="p-5 rounded-xl border border-primary bg-card">
               <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
-                <h3 className="font-semibold text-lg">Starter</h3>
+                <h3 className="font-semibold text-lg">Pro</h3>
                 <Badge className="bg-primary text-primary-foreground">Recommended</Badge>
               </div>
               
@@ -307,7 +307,7 @@ const Billing = () => {
               </p>
               
               <ul className="space-y-2 mb-6">
-                {PLANS.starter.features.slice(0, 5).map((feature) => (
+                {PLANS.pro.features.slice(0, 5).map((feature) => (
                   <li key={feature} className="flex items-start gap-2 text-sm">
                     <Check className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
                     <span className="text-muted-foreground">{feature}</span>
@@ -382,9 +382,9 @@ const Billing = () => {
           <div className="flex flex-col sm:flex-row items-start gap-4">
             <AlertCircle className="w-6 h-6 text-amber-500 flex-shrink-0" />
             <div>
-              <h3 className="font-semibold mb-1">API Access Requires Starter or Enterprise</h3>
+              <h3 className="font-semibold mb-1">API Access Requires Pro or Enterprise</h3>
               <p className="text-sm text-muted-foreground mb-3">
-                Programmatic API access is available on Starter ($12/mo) and Enterprise plans.
+                Programmatic API access is available on Pro ($12/mo) and Enterprise plans.
                 Upgrade to unlock the full Link Harbour API.
               </p>
               <Button
@@ -396,7 +396,7 @@ const Billing = () => {
                 {isUpgrading ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
                 ) : (
-                  'Upgrade to Starter'
+                  'Upgrade to Pro'
                 )}
               </Button>
             </div>
@@ -404,8 +404,8 @@ const Billing = () => {
         </motion.div>
       )}
 
-      {/* Starter users - show portal access */}
-      {currentPlan === 'starter' && (
+      {/* Pro users - show portal access */}
+      {currentPlan === 'pro' && (
         <motion.div
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
@@ -415,9 +415,9 @@ const Billing = () => {
           <div className="flex flex-col sm:flex-row items-start gap-4">
             <Check className="w-6 h-6 text-primary flex-shrink-0" />
             <div>
-              <h3 className="font-semibold mb-1">You're on the Starter plan!</h3>
+              <h3 className="font-semibold mb-1">You're on the Pro plan!</h3>
               <p className="text-sm text-muted-foreground mb-3">
-                You have full API access and all Starter features. Need more? Contact us for Enterprise pricing.
+                You have full API access and all Pro features. Need more? Contact us for Enterprise pricing.
               </p>
               <div className="flex flex-wrap gap-3">
                 <Button

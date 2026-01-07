@@ -23,10 +23,10 @@ export interface PortalSessionResponse {
   url: string;
 }
 
-// Helper to check if user has pro-level access (Starter or Enterprise with active subscription)
+// Helper to check if user has pro-level access (Pro or Enterprise with active subscription)
 export const hasProAccess = (status: SubscriptionStatus | null): boolean => {
   if (!status) return false;
-  const isPaidPlan = status.plan === 'starter' || status.plan === 'enterprise';
+  const isPaidPlan = status.plan === 'pro' || status.plan === 'enterprise';
   const isActive = status.status === 'active' || status.status === 'trialing';
   return isPaidPlan && isActive;
 };
@@ -128,7 +128,7 @@ class BillingClient {
   /**
    * Create a Stripe checkout session for upgrading to a plan
    */
-  async createCheckoutSession(planName: PlanName = 'starter'): Promise<CheckoutSessionResponse> {
+  async createCheckoutSession(planName: PlanName = 'pro'): Promise<CheckoutSessionResponse> {
     const response = await this.request<{
       url?: string;
       checkoutUrl?: string;

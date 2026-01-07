@@ -14,18 +14,19 @@ import { toast } from "sonner";
 
 // Feature comparison for the table (3-tier)
 const featureComparison = [
-  { feature: "Short links", free: "50", starter: "500", enterprise: "Unlimited" },
-  { feature: "Tracked clicks/month", free: "1,000", starter: "25,000", enterprise: "Unlimited" },
-  { feature: "Analytics retention", free: "7 days", starter: "90 days", enterprise: "Unlimited" },
-  { feature: "QR codes", free: "PNG", starter: "PNG + SVG", enterprise: "PNG + SVG" },
-  { feature: "Custom slugs", free: false, starter: true, enterprise: true },
-  { feature: "Link expiration", free: false, starter: true, enterprise: true },
-  { feature: "Custom domains", free: "—", starter: "3", enterprise: "Unlimited" },
-  { feature: "API access", free: false, starter: true, enterprise: true },
-  { feature: "Priority support", free: false, starter: true, enterprise: true },
-  { feature: "SSO/SAML", free: false, starter: false, enterprise: true },
-  { feature: "Dedicated account manager", free: false, starter: false, enterprise: true },
-  { feature: "SLA guarantee", free: false, starter: false, enterprise: true },
+  { feature: "Short links", free: "50", pro: "500", enterprise: "Unlimited" },
+  { feature: "Tracked clicks/month", free: "1,000", pro: "25,000", enterprise: "Unlimited" },
+  { feature: "Analytics retention", free: "7 days", pro: "90 days", enterprise: "Unlimited" },
+  { feature: "QR codes", free: "PNG", pro: "PNG + SVG", enterprise: "PNG + SVG" },
+  { feature: "Custom slugs", free: false, pro: true, enterprise: true },
+  { feature: "Link expiration", free: false, pro: true, enterprise: true },
+  { feature: "Custom domains", free: "—", pro: "3", enterprise: "Unlimited" },
+  { feature: "Bulk link creation", free: false, pro: true, enterprise: true },
+  { feature: "API access", free: false, pro: true, enterprise: true },
+  { feature: "Priority support", free: false, pro: true, enterprise: true },
+  { feature: "SSO/SAML", free: false, pro: false, enterprise: true },
+  { feature: "Dedicated account manager", free: false, pro: false, enterprise: true },
+  { feature: "SLA guarantee", free: false, pro: false, enterprise: true },
 ];
 
 const Pricing = () => {
@@ -51,7 +52,7 @@ const Pricing = () => {
 
     setIsUpgrading(true);
     try {
-      const { url } = await createCheckoutSession('starter');
+      const { url } = await createCheckoutSession('pro');
       window.location.href = url;
     } catch (error: any) {
       console.error('Checkout error:', error);
@@ -74,13 +75,13 @@ const Pricing = () => {
     }
   };
 
-  const getStarterButtonText = () => {
-    if (!isAuthenticated) return 'Start with Starter';
+  const getProButtonText = () => {
+    if (!isAuthenticated) return 'Start with Pro';
     if (hasProPlanAccess) return 'Manage Billing';
-    return 'Upgrade to Starter';
+    return 'Upgrade to Pro';
   };
 
-  const handleStarterClick = () => {
+  const handleProClick = () => {
     if (hasProPlanAccess) {
       handleManageBilling();
     } else {
@@ -97,10 +98,10 @@ const Pricing = () => {
       isCurrentPlan: isAuthenticated && currentPlan === 'free',
     },
     {
-      ...PLANS.starter,
-      cta: getStarterButtonText(),
+      ...PLANS.pro,
+      cta: getProButtonText(),
       popular: true,
-      onClick: handleStarterClick,
+      onClick: handleProClick,
       isCurrentPlan: false, // Never disable - show Manage Billing for paid users
     },
   ];
@@ -123,7 +124,7 @@ const Pricing = () => {
               <span className="gradient-text">Pricing</span>
             </h1>
             <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-              Start free, upgrade when you need more. API access included in Starter.
+              Start free, upgrade when you need more. API access included in Pro.
             </p>
           </motion.div>
 
@@ -227,7 +228,7 @@ const Pricing = () => {
                     <tr className="bg-muted/50">
                       <th className="text-left py-4 px-4 font-medium">Feature</th>
                       <th className="text-center py-4 px-4 font-medium">Free</th>
-                      <th className="text-center py-4 px-4 font-medium bg-primary/5">Starter</th>
+                      <th className="text-center py-4 px-4 font-medium bg-primary/5">Pro</th>
                       <th className="text-center py-4 px-4 font-medium">Enterprise</th>
                     </tr>
                   </thead>
@@ -247,14 +248,14 @@ const Pricing = () => {
                           )}
                         </td>
                         <td className="py-3 px-4 text-center bg-primary/5">
-                          {typeof row.starter === "boolean" ? (
-                            row.starter ? (
+                          {typeof row.pro === "boolean" ? (
+                            row.pro ? (
                               <Check className="w-4 h-4 text-primary mx-auto" />
                             ) : (
                               <X className="w-4 h-4 text-muted-foreground/50 mx-auto" />
                             )
                           ) : (
-                            <span className="text-sm font-medium">{row.starter}</span>
+                            <span className="text-sm font-medium">{row.pro}</span>
                           )}
                         </td>
                         <td className="py-3 px-4 text-center">
