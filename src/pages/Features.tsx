@@ -344,7 +344,7 @@ const Features = () => {
                 <span className="font-medium text-foreground group-hover:text-primary underline underline-offset-2 decoration-primary/50">
                   Lowtide Digital
                 </span>
-                <img src="/lowtide-favicon.png" alt="Lowtide Digital" className="w-4 h-4" />
+                <img src="/lowtide-logo.png" alt="Lowtide Digital" className="w-5 h-5" />
               </a>
             </div>
           </div>
