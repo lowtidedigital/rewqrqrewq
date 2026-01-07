@@ -37,6 +37,7 @@ import {
   Save,
   Loader2,
   AlertCircle,
+  RefreshCw,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { config, buildShortUrl } from "@/config";
@@ -73,11 +74,15 @@ const LinkDetail = () => {
   });
 
   // Fetch real analytics
-  const { data: analytics, isLoading: isLoadingAnalytics } = useQuery({
+  const { data: analytics, isLoading: isLoadingAnalytics, isFetching: isFetchingAnalytics } = useQuery({
     queryKey: ['linkAnalytics', id],
     queryFn: () => api.getLinkAnalytics(id!),
     enabled: !!id,
   });
+
+  const handleRefreshAnalytics = () => {
+    queryClient.invalidateQueries({ queryKey: ['linkAnalytics', id] });
+  };
 
   // Update link mutation
   const updateMutation = useMutation({
@@ -454,6 +459,17 @@ const LinkDetail = () => {
 
         {/* Analytics Tab */}
         <TabsContent value="analytics" className="space-y-6">
+          <div className="flex justify-end">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={handleRefreshAnalytics}
+              disabled={isFetchingAnalytics}
+            >
+              <RefreshCw className={cn("w-4 h-4 mr-2", isFetchingAnalytics && "animate-spin")} />
+              Refresh
+            </Button>
+          </div>
           {isLoadingAnalytics ? (
             <div className="flex items-center justify-center py-12">
               <Loader2 className="w-8 h-8 animate-spin text-primary" />

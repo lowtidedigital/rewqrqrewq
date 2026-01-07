@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import StatsCard from "@/components/StatsCard";
+import { Button } from "@/components/ui/button";
 import { api } from "@/lib/api";
 import { buildShortUrl } from "@/config";
 import { 
@@ -12,13 +13,17 @@ import {
   ArrowDownRight,
   BarChart2,
   Loader2,
-  AlertCircle
+  AlertCircle,
+  RefreshCw
 } from "lucide-react";
 import { Link } from "react-router-dom";
+import { cn } from "@/lib/utils";
 
 const Analytics = () => {
+  const queryClient = useQueryClient();
+
   // Fetch real dashboard stats
-  const { data: stats, isLoading: isLoadingStats, error: statsError } = useQuery({
+  const { data: stats, isLoading: isLoadingStats, error: statsError, isFetching } = useQuery({
     queryKey: ['dashboardStats'],
     queryFn: () => api.getDashboardStats(),
     staleTime: 30000,
@@ -32,6 +37,11 @@ const Analytics = () => {
   });
 
   const isLoading = isLoadingStats || isLoadingLinks;
+
+  const handleRefresh = () => {
+    queryClient.invalidateQueries({ queryKey: ['dashboardStats'] });
+    queryClient.invalidateQueries({ queryKey: ['links'] });
+  };
 
   // Calculate real stats with fallbacks
   const totalClicks = stats?.total_clicks ?? 0;
@@ -80,9 +90,21 @@ const Analytics = () => {
         initial={{ y: -10, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.3 }}
+        className="flex items-center justify-between"
       >
-        <h1 className="font-display text-3xl font-bold">Analytics</h1>
-        <p className="text-muted-foreground">Track performance across all your links.</p>
+        <div>
+          <h1 className="font-display text-3xl font-bold">Analytics</h1>
+          <p className="text-muted-foreground">Track performance across all your links.</p>
+        </div>
+        <Button 
+          variant="outline" 
+          size="sm" 
+          onClick={handleRefresh}
+          disabled={isFetching}
+        >
+          <RefreshCw className={cn("w-4 h-4 mr-2", isFetching && "animate-spin")} />
+          Refresh
+        </Button>
       </motion.div>
 
       {/* Stats Grid */}

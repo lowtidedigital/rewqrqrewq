@@ -330,16 +330,21 @@ export async function handler(
   const redirectType = Number(link.redirectType || link.redirect_type || 302);
   const statusCode = redirectType === 301 ? 301 : 302;
   const headers = event.headers || {};
+  const privacyMode = link.privacyMode ?? link.privacy_mode ?? false;
 
-  // Record analytics (async, don't block redirect)
-  writeClickEvent({
-    slug,
-    linkId,
-    userId,
-    referrer: headers['referer'] || headers['referrer'],
-    userAgent: headers['user-agent'],
-    country: parseCountry(headers),
-  });
+  // Record analytics (async, don't block redirect) - skip if privacy mode is enabled
+  if (!privacyMode) {
+    writeClickEvent({
+      slug,
+      linkId,
+      userId,
+      referrer: headers['referer'] || headers['referrer'],
+      userAgent: headers['user-agent'],
+      country: parseCountry(headers),
+    });
+  } else {
+    logger.debug('Privacy mode enabled, skipping analytics', { linkId, slug });
+  }
 
   logger.info('Redirect successful', { requestId, slug, linkId, statusCode, destination: longUrl });
 
