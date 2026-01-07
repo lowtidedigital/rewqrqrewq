@@ -224,17 +224,39 @@ class ApiClient {
       `/links/${linkId}/analytics${query ? `?${query}` : ''}`
     );
 
-    // Transform camelCase backend response to snake_case frontend format
+    // Dev logging for debugging
+    if (import.meta.env.DEV) {
+      console.debug('[api.getLinkAnalytics] Raw response:', response);
+    }
+
+    // Normalize totalClicks with safe fallbacks
+    const summaryTotalClicks = response.summary?.totalClicks ?? 0;
+    const responseTotalClicks = response.totalClicks ?? 0;
+    const clicksToday = response.summary?.clicksToday ?? 0;
+    const clicksThisWeek = response.summary?.clicksThisWeek ?? 0;
+    const clicksThisMonth = response.summary?.clicksThisMonth ?? 0;
+    
+    // Use the best available total with fallback chain
+    const totalClicksUI = responseTotalClicks > 0 
+      ? responseTotalClicks 
+      : summaryTotalClicks > 0 
+        ? summaryTotalClicks 
+        : Math.max(clicksToday, clicksThisWeek, clicksThisMonth, 0);
+
+    // Get clicks over time with fallback to last7Days
+    const rawClicksOverTime = response.summary?.clicksOverTime || response.clicks_over_time || [];
+    const last7Days = response.last7Days || [];
+    const clicksOverTime = rawClicksOverTime.length > 0 ? rawClicksOverTime : last7Days;
+
     return {
-      total_clicks: response.totalClicks ?? response.total_clicks ?? 0,
-      clicks_today: response.summary?.clicksToday ?? response.clicksToday ?? response.clicks_today ?? 0,
-      clicks_this_week: response.summary?.clicksThisWeek ?? response.clicksThisWeek ?? response.clicks_this_week ?? 0,
-      clicks_this_month: response.summary?.clicksThisMonth ?? response.clicksThisMonth ?? response.clicks_this_month ?? 0,
+      total_clicks: totalClicksUI,
+      clicks_today: clicksToday,
+      clicks_this_week: clicksThisWeek,
+      clicks_this_month: clicksThisMonth,
       top_referrers: (response.referrers || response.summary?.topReferrers || response.top_referrers || []),
       top_countries: (response.countries || response.summary?.topCountries || response.top_countries || []),
       device_breakdown: (response.devices || response.summary?.deviceBreakdown || response.device_breakdown || []),
-      clicks_over_time: (response.last7Days || response.summary?.clicksOverTime || response.clicks_over_time || [])
-        .map((d: any) => ({ date: d.date, count: d.clicks ?? d.count ?? 0 })),
+      clicks_over_time: clicksOverTime.map((d: any) => ({ date: d.date, count: d.clicks ?? d.count ?? 0 })),
       recent_clicks: (response.recentEvents || response.recent_clicks || [])
         .map((e: any) => ({
           event_id: e.eventId || e.event_id || '',
@@ -252,16 +274,38 @@ class ApiClient {
     active_links: number;
     clicks_today: number;
     clicks_this_week: number;
-    top_links: Link[];
+    top_links: { link_id: string; slug: string; title?: string; clicks: number }[];
   }> {
     const response = await this.request<any>('GET', '/analytics/dashboard');
+    
+    // Dev logging for debugging
+    if (import.meta.env.DEV) {
+      console.debug('[api.getDashboardStats] Raw response:', response);
+    }
+
+    // Normalize totals with fallback chain
+    const totalClicks = response.totalClicks ?? response.total_clicks ?? 0;
+    const clicksToday = response.clicksToday ?? response.clicks_today ?? 0;
+    const clicksThisWeek = response.clicksThisWeek ?? response.clicks_this_week ?? 0;
+    
+    // Ensure totalClicks is not 0 when we have recent clicks
+    const totalClicksUI = totalClicks > 0 ? totalClicks : Math.max(clicksToday, clicksThisWeek, 0);
+
+    // Transform top links with proper click counts
+    const topLinks = (response.topLinks || response.top_links || []).map((l: any) => ({
+      link_id: l.id || l.link_id,
+      slug: l.slug,
+      title: l.title,
+      clicks: l.clicks ?? l.clickCount ?? l.click_count ?? 0,
+    }));
+
     return {
       total_links: response.totalLinks ?? response.total_links ?? 0,
-      total_clicks: response.totalClicks ?? response.total_clicks ?? 0,
+      total_clicks: totalClicksUI,
       active_links: response.activeLinks ?? response.active_links ?? 0,
-      clicks_today: response.clicksToday ?? response.clicks_today ?? 0,
-      clicks_this_week: response.clicksThisWeek ?? response.clicks_this_week ?? 0,
-      top_links: (response.topLinks || response.top_links || []).map(transformLinkResponse),
+      clicks_today: clicksToday,
+      clicks_this_week: clicksThisWeek,
+      top_links: topLinks,
     };
   }
 

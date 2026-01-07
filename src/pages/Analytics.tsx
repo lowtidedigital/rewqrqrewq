@@ -33,18 +33,27 @@ const Analytics = () => {
 
   const isLoading = isLoadingStats || isLoadingLinks;
 
-  // Calculate real stats
+  // Calculate real stats with fallbacks
   const totalClicks = stats?.total_clicks ?? 0;
   const totalLinks = stats?.total_links ?? 0;
   const activeLinks = stats?.active_links ?? 0;
   const clicksToday = stats?.clicks_today ?? 0;
 
-  // Sort links by click count for top performers
-  const topLinks = [...(linksData?.items || [])]
-    .sort((a, b) => (b.click_count || 0) - (a.click_count || 0))
-    .slice(0, 5);
+  // Dev logging
+  if (import.meta.env.DEV && stats) {
+    console.debug('[Analytics] Dashboard stats:', stats);
+  }
 
-  const hasData = totalClicks > 0 || totalLinks > 0;
+  // Use top_links from dashboard stats if available, else fall back to links list
+  const dashboardTopLinks = stats?.top_links || [];
+  const topLinks = dashboardTopLinks.length > 0
+    ? dashboardTopLinks
+    : [...(linksData?.items || [])]
+        .sort((a, b) => (b.click_count || 0) - (a.click_count || 0))
+        .slice(0, 5)
+        .map(l => ({ link_id: l.link_id, slug: l.slug, title: l.title, clicks: l.click_count || 0 }));
+
+  const hasData = totalClicks > 0 || totalLinks > 0 || clicksToday > 0;
 
   if (isLoading) {
     return (
@@ -151,25 +160,28 @@ const Analytics = () => {
               <p className="text-muted-foreground text-sm">No links yet</p>
             ) : (
               <div className="space-y-4">
-                {topLinks.map((link, index) => (
-                  <Link 
-                    key={link.link_id} 
-                    to={`/dashboard/links/${link.link_id}`}
-                    className="flex items-center justify-between py-2 border-b border-border/50 last:border-0 hover:bg-muted/50 -mx-2 px-2 rounded transition-colors"
-                  >
-                    <div className="flex items-center gap-3">
-                      <span className="text-sm text-muted-foreground w-6">{index + 1}.</span>
-                      <div>
-                        <p className="font-medium">{link.title || link.slug}</p>
-                        <p className="text-sm text-muted-foreground">/{link.slug}</p>
+                {topLinks.map((link, index) => {
+                  const clickCount = 'clicks' in link ? link.clicks : (link as any).click_count ?? 0;
+                  return (
+                    <Link 
+                      key={link.link_id} 
+                      to={`/dashboard/links/${link.link_id}`}
+                      className="flex items-center justify-between py-2 border-b border-border/50 last:border-0 hover:bg-muted/50 -mx-2 px-2 rounded transition-colors"
+                    >
+                      <div className="flex items-center gap-3">
+                        <span className="text-sm text-muted-foreground w-6">{index + 1}.</span>
+                        <div>
+                          <p className="font-medium">{link.title || link.slug}</p>
+                          <p className="text-sm text-muted-foreground">/{link.slug}</p>
+                        </div>
                       </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <span className="font-medium">{(link.click_count || 0).toLocaleString()}</span>
-                      <span className="text-sm text-muted-foreground">clicks</span>
-                    </div>
-                  </Link>
-                ))}
+                      <div className="flex items-center gap-3">
+                        <span className="font-medium">{clickCount.toLocaleString()}</span>
+                        <span className="text-sm text-muted-foreground">clicks</span>
+                      </div>
+                    </Link>
+                  );
+                })}
               </div>
             )}
           </motion.div>

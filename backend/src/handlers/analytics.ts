@@ -159,8 +159,13 @@ async function handleLinkAnalytics(
     });
   }
 
+  // Compute effective total with fallbacks
+  const effectiveTotal = aggregates.total > 0 
+    ? aggregates.total 
+    : Math.max(clicksToday, clicksThisWeek, clicksThisMonth, recentEvents.length);
+
   const summary: AnalyticsSummary = {
-    totalClicks: aggregates.total,
+    totalClicks: effectiveTotal,
     clicksToday,
     clicksThisWeek,
     clicksThisMonth,
@@ -175,24 +180,25 @@ async function handleLinkAnalytics(
     deviceBreakdown: Object.entries(deviceCounts)
       .sort((a, b) => b[1] - a[1])
       .map(([device, count]) => ({ device, count })),
-    clicksOverTime: aggregates.daily.slice(-days).map(d => ({ date: d.date, count: d.clicks })),
+    // Ensure clicksOverTime is populated, fallback to last7Days format
+    clicksOverTime: last7Days.map(d => ({ date: d.date, count: d.clicks })),
   };
 
   logger.info('Link analytics response', { 
     requestId, 
     linkId, 
-    totalClicks: aggregates.total,
+    totalClicks: effectiveTotal,
     clicksToday,
   });
 
   return apiResponse(200, {
     linkId: link.id,
-    totalClicks: aggregates.total,
+    totalClicks: effectiveTotal,
     last7Days,
     referrers: summary.topReferrers,
     devices: summary.deviceBreakdown,
     countries: summary.topCountries,
-    // Also include full summary for backwards compatibility
+    // Include full summary for frontend normalization
     link: {
       id: link.id,
       slug: link.slug,
@@ -201,6 +207,7 @@ async function handleLinkAnalytics(
     },
     summary,
     recentEvents: recentEvents.slice(0, 50).map(e => ({
+      eventId: e.eventId,
       timestamp: e.timestamp,
       referrer: e.referrer,
       country: e.country,
