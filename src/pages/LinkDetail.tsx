@@ -177,12 +177,24 @@ const LinkDetail = () => {
     );
   }
 
-  // Process analytics data
-  const hasAnalytics = analytics && analytics.total_clicks > 0;
+  // Process analytics data with comprehensive "has data" check
+  const recentClicks = analytics?.recent_clicks || [];
   const clicksOverTime = analytics?.clicks_over_time || [];
   const topReferrers = analytics?.top_referrers || [];
   const topCountries = analytics?.top_countries || [];
   const deviceBreakdown = analytics?.device_breakdown || [];
+  
+  // Fix: Check ALL sources of analytics data, not just total_clicks
+  const hasAnalytics = analytics && (
+    analytics.total_clicks > 0 ||
+    analytics.clicks_today > 0 ||
+    analytics.clicks_this_week > 0 ||
+    analytics.clicks_this_month > 0 ||
+    recentClicks.length > 0 ||
+    topReferrers.some(r => r.count > 0) ||
+    topCountries.some(c => c.count > 0) ||
+    deviceBreakdown.some(d => d.count > 0)
+  );
 
   return (
     <div className="space-y-6">
