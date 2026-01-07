@@ -12,10 +12,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import LinkCard, { LinkData } from "@/components/LinkCard";
-import { Plus, Search, Filter, SortAsc, Link2, AlertCircle } from "lucide-react";
+import { Plus, Search, Filter, SortAsc, Link2, AlertCircle, ChevronDown, FileSpreadsheet } from "lucide-react";
 import { buildShortUrl } from "@/config";
 import { api, Link as ApiLink } from "@/lib/api";
+import { useSubscription } from "@/contexts/SubscriptionContext";
+import { canBulkCreate } from "@/lib/plans";
 
 // Transform API link to LinkCard format
 const transformLink = (link: ApiLink): LinkData => ({
@@ -31,6 +39,8 @@ const transformLink = (link: ApiLink): LinkData => ({
 });
 
 const LinksList = () => {
+  const { currentPlan } = useSubscription();
+  const hasBulkAccess = canBulkCreate(currentPlan);
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState("newest");
   const [filterStatus, setFilterStatus] = useState("all");
@@ -80,12 +90,32 @@ const LinksList = () => {
           <h1 className="font-display text-3xl font-bold">Links</h1>
           <p className="text-muted-foreground">Manage all your short links in one place.</p>
         </div>
-        <Button variant="hero" asChild>
-          <Link to="/dashboard/links/new">
-            <Plus className="w-4 h-4" />
-            Create Link
-          </Link>
-        </Button>
+        <div className="flex items-center gap-2">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="hero">
+                <Plus className="w-4 h-4" />
+                Create Link
+                <ChevronDown className="w-4 h-4 ml-1" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem asChild>
+                <Link to="/dashboard/links/new" className="flex items-center gap-2">
+                  <Plus className="w-4 h-4" />
+                  Single Link
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link to="/dashboard/links/bulk" className="flex items-center gap-2">
+                  <FileSpreadsheet className="w-4 h-4" />
+                  Bulk Create
+                  {!hasBulkAccess && <span className="text-xs text-muted-foreground ml-1">(Pro)</span>}
+                </Link>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </motion.div>
 
       {/* Error State */}

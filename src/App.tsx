@@ -15,6 +15,7 @@ import Dashboard from "./pages/Dashboard";
 import LinksList from "./pages/LinksList";
 import LinkDetail from "./pages/LinkDetail";
 import CreateLink from "./pages/CreateLink";
+import BulkCreate from "./pages/BulkCreate";
 import Analytics from "./pages/Analytics";
 import Settings from "./pages/Settings";
 import Billing from "./pages/Billing";
@@ -93,6 +94,7 @@ const App = () => (
                   <Route index element={<Dashboard />} />
                   <Route path="links" element={<LinksList />} />
                   <Route path="links/new" element={<CreateLink />} />
+                  <Route path="links/bulk" element={<BulkCreate />} />
                   <Route path="links/:id" element={<LinkDetail />} />
                   <Route path="analytics" element={<Analytics />} />
                   <Route path="settings" element={<Settings />} />
