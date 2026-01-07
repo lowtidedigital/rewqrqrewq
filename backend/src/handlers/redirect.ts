@@ -1,3 +1,5 @@
+
+
 import type { APIGatewayProxyEventHeaders } from "aws-lambda";
 
 import type {
@@ -295,8 +297,8 @@ export async function handler(
     return html(404, "Not Found", `Short link "${slug}" does not exist.`);
   }
 
-  const linkId = link.id || link.linkId;
-  const userId = link.userId || link.owner_user_id;
+  const linkId = link.id ?? link.linkId;
+  const userId = link.userId ?? link.userId; // (keep as-is if only userId exists)
   const longUrl = link.longUrl || link.long_url || link.destination || link.url;
   const enabled = link.enabled === undefined || link.enabled === null ? true : !!link.enabled;
   const expiresAt = link.expiresAt ?? link.expires_at ?? null;

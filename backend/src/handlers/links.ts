@@ -1,6 +1,6 @@
 // Links CRUD Handler - Authenticated endpoints for link management
 import type { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from 'aws-lambda';
-import { v4 as uuidv4 } from 'uuid';
+import crypto from "crypto";
 import { 
   getLinkById, 
   listLinksByUser, 
@@ -122,7 +122,9 @@ async function handleCreate(event: APIGatewayProxyEventV2, userId: string): Prom
   }
 
   const now = Date.now();
-  const linkId = uuidv4();
+
+  // ✅ FIX: remove uuid dependency (Node 20 has built-in UUIDs)
+  const linkId = crypto.randomUUID();
 
   // Generate QR code
   const qrAssets = await generateQRCode(linkId, slug);
