@@ -11,6 +11,8 @@ export const config = {
   shortDomain: import.meta.env.VITE_SHORT_DOMAIN || 'lh.linkharbour.io',
   // App domain for the main application
   appDomain: import.meta.env.VITE_APP_DOMAIN || 'app.linkharbour.io',
+  // Stripe publishable key (safe for client-side)
+  stripePublishableKey: 'pk_live_51SkadqRd9hGS6kHh2S8eEeBKWZ5mOfXmoou3zbuoayDJtRQy8baEsqOEsKxipnQp5OdCQ6tnCeAQsMhGCLbFjiwu00jajTaCqp',
 };
 
 /**
