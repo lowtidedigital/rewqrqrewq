@@ -100,7 +100,7 @@ const Index = () => {
             </h1>
 
             <p className="text-xl md:text-2xl text-muted-foreground mb-8 max-w-2xl mx-auto leading-relaxed">
-              The fastest, most reliable URL shortener built on AWS. 
+              The fastest, most reliable URL shortener. 
               Create branded links, generate QR codes, and track every click.
             </p>
 
