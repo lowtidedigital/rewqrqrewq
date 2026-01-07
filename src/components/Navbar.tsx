@@ -22,7 +22,7 @@ const Navbar = () => {
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center gap-8">
-            <Link to="/#features" className="text-muted-foreground hover:text-foreground transition-colors">
+            <Link to="/features" className="text-muted-foreground hover:text-foreground transition-colors">
               Features
             </Link>
             <Link to="/pricing" className="text-muted-foreground hover:text-foreground transition-colors">
@@ -62,7 +62,7 @@ const Navbar = () => {
           >
             <div className="flex flex-col gap-4">
               <Link
-                to="/#features"
+                to="/features"
                 className="text-muted-foreground hover:text-foreground transition-colors"
                 onClick={() => setIsMenuOpen(false)}
               >
