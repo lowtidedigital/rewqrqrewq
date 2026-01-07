@@ -13,6 +13,7 @@ import {
   ArrowRight,
   Check,
   Code,
+  BatteryFull,
 } from "lucide-react";
 
 // Business logos for social proof
@@ -157,7 +158,7 @@ const Index = () => {
               transition={{ duration: 0.4, delay: 0.6 }}
               className="mt-8 inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 border border-primary/30 text-primary text-sm font-medium"
             >
-              <Anchor className="w-4 h-4" />
+              <BatteryFull className="w-4 h-4" />
               Powered by AWS Serverless
             </motion.div>
           </motion.div>
