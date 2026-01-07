@@ -1,8 +1,31 @@
-﻿**/.terraform/*
+﻿# -------------------------
+# Node / JS
+# -------------------------
+node_modules/
+**/node_modules/
+
+# -------------------------
+# Build outputs / packaging
+# -------------------------
+dist/
+**/dist/
+backend/deploy/
+*.zip
+
+# -------------------------
+# Env / secrets
+# -------------------------
+.env
+.env.*
+backend/env-*.json
+
+# -------------------------
+# Terraform
+# -------------------------
+**/.terraform/*
+**/.terraform.lock.hcl
 **/.terraform.lock.hcl
 **/*.tfstate
 **/*.tfstate.*
 **/*.tfvars
 **/*.tfvars.json
-.env
-.env.*

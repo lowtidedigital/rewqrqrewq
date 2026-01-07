@@ -1,3 +1,5 @@
+import type { APIGatewayProxyEventHeaders } from "aws-lambda";
+
 import type {
   APIGatewayProxyEventV2,
   APIGatewayProxyResultV2,
@@ -75,11 +77,23 @@ function parseDevice(userAgent?: string): string {
   return 'desktop';
 }
 
-function parseCountry(headers: Record<string, string>): string {
-  return headers['cloudfront-viewer-country'] || 
-         headers['cf-ipcountry'] || 
-         'unknown';
+function parseCountry(headers: APIGatewayProxyEventHeaders = {}): string {
+  const get = (k: string) => {
+    const v = headers[k] ?? headers[k.toLowerCase()] ?? headers[k.toUpperCase()];
+    return typeof v === "string" ? v : "";
+  };
+
+  // keep/expand keys based on what your infra sets
+  const country =
+    get("cloudfront-viewer-country") ||
+    get("CloudFront-Viewer-Country") ||
+    get("x-country") ||
+    get("x-vercel-ip-country") ||
+    "";
+
+  return country ? country.toUpperCase() : "US"; // choose your default
 }
+
 
 // Get link by slug using the single-table design
 // PK: SLUG#{slug}, SK: METADATA -> returns linkId + userId

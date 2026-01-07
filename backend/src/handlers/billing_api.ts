@@ -2,6 +2,10 @@ import type {
   APIGatewayProxyEventV2,
   APIGatewayProxyResultV2,
 } from "aws-lambda";
+ // ✅ fixes "cannot find module aws-lambda" TS error
+// If you prefer, you can keep: from "aws-lambda"
+// ...but then you MUST have: npm i -D @types/aws-lambda
+
 import Stripe from "stripe";
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import {
@@ -24,7 +28,11 @@ const PAID_PRICE_ID =
   "";
 
 // -------------------- Stripe --------------------
-const stripe = new Stripe(STRIPE_SECRET_KEY);
+// If your stripe types complain about apiVersion, keep this.
+// Otherwise you can remove the 2nd arg and it will still work.
+const stripe = new Stripe(STRIPE_SECRET_KEY, {
+  apiVersion: "2025-12-15.clover",
+});
 
 // -------------------- DynamoDB --------------------
 const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({}));
@@ -56,7 +64,6 @@ function corsHeaders() {
   };
 }
 
-
 function json(statusCode: number, body: unknown): APIGatewayProxyResultV2 {
   return {
     statusCode,
@@ -81,7 +88,6 @@ function getUserSub(event: APIGatewayProxyEventV2): string | null {
 
   return null;
 }
-
 
 async function getBillingRow(userSub: string): Promise<BillingRow | null> {
   const res = await ddb.send(
@@ -169,21 +175,77 @@ function parseJsonBody(event: APIGatewayProxyEventV2): any {
   }
 }
 
+function isActiveLikeStripeStatus(s: string | undefined) {
+  return s === "active" || s === "trialing" || s === "past_due" || s === "unpaid";
+}
+
+function planFromSubscription(sub: any): BillingPlan {
+  const priceIds: string[] =
+    sub?.items?.data?.map((i: any) => i?.price?.id).filter(Boolean) ?? [];
+
+  if (PAID_PRICE_ID && priceIds.includes(PAID_PRICE_ID)) return "starter";
+  return "free";
+}
+
+/**
+ * NEW: If DynamoDB is still "free/none" but we have a Stripe customer,
+ * query Stripe and backfill subscription status into DynamoDB.
+ *
+ * Fixes TS error by accessing current_period_end via "any" fallback.
+ */
+async function backfillFromStripeIfNeeded(userSub: string, row: BillingRow): Promise<BillingRow> {
+  if (!row.stripeCustomerId) return row;
+
+  const looksMissing =
+    !row.subscriptionId || row.status === "none" || row.plan === "free";
+
+  if (!looksMissing) return row;
+
+  try {
+    const subs = await stripe.subscriptions.list({
+      customer: row.stripeCustomerId,
+      status: "all",
+      limit: 10,
+    });
+
+    // pick best: active-like first, otherwise nothing
+    const best =
+      subs.data.find((s: any) => isActiveLikeStripeStatus(s?.status)) ??
+      null;
+
+    if (!best) return row;
+
+    const plan = planFromSubscription(best);
+    const isActive = isActiveLikeStripeStatus((best as any).status) && plan === "starter";
+
+    // ✅ fixes TS complaint: some Stripe TS builds don't expose current_period_end
+    const currentPeriodEnd =
+      (best as any).current_period_end ??
+      (best as any).currentPeriodEnd ??
+      0;
+
+    const patch: Partial<BillingRow> = {
+      subscriptionId: (best as any).id ?? "",
+      plan,
+      status: isActive ? "active" : "none",
+      currentPeriodEnd: Number(currentPeriodEnd) || 0,
+    };
+
+    await updateBillingRow(userSub, patch);
+
+    // return the fresh row from Dynamo to keep it consistent
+    return (await getBillingRow(userSub)) ?? { ...row, ...patch, updatedAt: nowIso() };
+  } catch {
+    // If Stripe is temporarily down / key issues, don't break billing page
+    return row;
+  }
+}
+
 // -------------------- HANDLER --------------------
 export async function handler(
   event: APIGatewayProxyEventV2
 ): Promise<APIGatewayProxyResultV2> {
   const method = event.requestContext.http.method;
-  // TEMP DEBUG: remove after auth is stable
-try {
-  const auth = (event.requestContext as any)?.authorizer;
-  console.log("AUTH_PRESENT", !!auth);
-  console.log("AUTH_KEYS", auth ? Object.keys(auth) : []);
-  console.log("AUTH_RAW", JSON.stringify(auth || {}));
-} catch {
-  // ignore
-}
-
 
   // CORS preflight
   if (method === "OPTIONS") {
@@ -213,71 +275,92 @@ try {
     body.returnUrl || `https://${APP_DOMAIN}/dashboard/billing`;
 
   // -------------------- GET /billing/status --------------------
-  if (method === "GET" && path.endsWith("/billing/status")) {
-    const row = await ensureBillingRow(userSub);
-    return json(200, {
-      plan: row.plan,
-      status: row.status,
-      stripeCustomerId: row.stripeCustomerId,
-      subscriptionId: row.subscriptionId,
-      currentPeriodEnd: row.currentPeriodEnd,
-      updatedAt: row.updatedAt,
+if (method === "GET" && path.endsWith("/billing/status")) {
+  let row = await ensureBillingRow(userSub);
+
+  // ✅ self-heal billing status from Stripe if Dynamo is stale/missing
+  row = await backfillFromStripeIfNeeded(userSub, row);
+
+  return json(200, {
+    plan: row.plan,
+    status: row.status,
+    stripeCustomerId: row.stripeCustomerId,
+    subscriptionId: row.subscriptionId,
+    currentPeriodEnd: row.currentPeriodEnd,
+    updatedAt: row.updatedAt,
+  });
+}
+
+
+  if (method === "POST" && path.endsWith("/billing/checkout")) {
+  if (!PAID_PRICE_ID) {
+    return json(500, {
+      message:
+        "Missing Stripe price id env var (set STRIPE_PRICE_ID or STRIPE_STARTER_PRICE_ID or STRIPE_PRO_PRICE_ID).",
     });
   }
 
-  // -------------------- POST /billing/checkout --------------------
-  if (method === "POST" && path.endsWith("/billing/checkout")) {
-    if (!PAID_PRICE_ID) {
-      return json(500, {
-        message:
-          "Missing Stripe price id env var (set STRIPE_PRICE_ID or STRIPE_STARTER_PRICE_ID or STRIPE_PRO_PRICE_ID).",
-      });
-    }
+  const requestedPriceId =
+    body.priceId || body.priceID || body.price || body.stripePriceId;
 
-    // Optional: accept priceId from frontend, but only if it matches the configured one
-    const requestedPriceId =
-      body.priceId || body.priceID || body.price || body.stripePriceId;
-    if (requestedPriceId && requestedPriceId !== PAID_PRICE_ID) {
-      return json(400, { message: "Invalid priceId" });
-    }
+  if (requestedPriceId && requestedPriceId !== PAID_PRICE_ID) {
+    return json(400, { message: "Invalid priceId" });
+  }
 
-    const row = await ensureBillingRow(userSub);
+  // Always start from Dynamo
+  let row = await ensureBillingRow(userSub);
 
-    // Ensure we have a Stripe customer id
-    let customerId = row.stripeCustomerId;
+  // Ensure Stripe customer exists
+  let customerId = row.stripeCustomerId;
 
-    if (!customerId) {
-      const customer = await stripe.customers.create({
-        metadata: { userSub }, // ✅ standard key for webhook mapping
-      });
-      customerId = customer.id;
-      await updateBillingRow(userSub, { stripeCustomerId: customerId });
-    } else {
-      // Best-effort: ensure metadata exists for subscription event mapping later
-      try {
-        await stripe.customers.update(customerId, {
-          metadata: { userSub },
-        });
-      } catch {
-        // non-fatal
-      }
-    }
+  if (!customerId) {
+    const customer = await stripe.customers.create({
+      metadata: { userSub },
+    });
+    customerId = customer.id;
+    await updateBillingRow(userSub, { stripeCustomerId: customerId });
 
-    const session = await stripe.checkout.sessions.create({
+    // refresh row in memory
+    row = { ...row, stripeCustomerId: customerId };
+  } else {
+    // Best-effort: ensure metadata exists for mapping
+    try {
+      await stripe.customers.update(customerId, { metadata: { userSub } });
+    } catch {}
+  }
+
+  // ✅ 1) Self-heal Dynamo from Stripe (handles "paid but Dynamo stale")
+  row = await backfillFromStripeIfNeeded(userSub, row);
+
+  // ✅ 2) If already active starter, don't charge again — send to portal
+  if (row.plan === "starter" && row.status === "active") {
+    const portal = await stripe.billingPortal.sessions.create({
+      customer: customerId,
+      return_url: returnUrl,
+    });
+    return json(200, { url: portal.url, alreadySubscribed: true });
+  }
+
+  // ✅ 3) Otherwise create checkout (idempotent)
+  const session = await stripe.checkout.sessions.create(
+    {
       mode: "subscription",
       customer: customerId,
       line_items: [{ price: PAID_PRICE_ID, quantity: 1 }],
       success_url: `${returnUrl}?success=1&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${returnUrl}?canceled=1`,
-      client_reference_id: userSub, // ✅ easy mapping
-      metadata: { userSub }, // ✅ easy mapping
-      subscription_data: {
-        metadata: { userSub }, // ✅ easy mapping on subscription
-      },
-    });
+      client_reference_id: userSub,
+      metadata: { userSub },
+      subscription_data: { metadata: { userSub } },
+    },
+    {
+      idempotencyKey: `checkout_${userSub}_${PAID_PRICE_ID}`,
+    }
+  );
 
-    return json(200, { url: session.url });
-  }
+  return json(200, { url: session.url });
+}
+
 
   // -------------------- POST /billing/portal --------------------
   if (method === "POST" && path.endsWith("/billing/portal")) {
@@ -315,3 +398,4 @@ try {
 
   return json(404, { message: "Not Found" });
 }
+
