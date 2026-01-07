@@ -272,9 +272,22 @@ const Index = () => {
         <div className="container mx-auto">
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
             <BrandLogo variant="header" linkTo="/" />
-            <p className="text-muted-foreground text-sm">
-              © 2025 Link Harbour. Built with ❤️ on AWS.
-            </p>
+            <div className="flex flex-col items-center md:items-end gap-1 text-sm">
+              <p className="text-muted-foreground">
+                © 2025 Link Harbour. Built with ❤️ on AWS.
+              </p>
+              <a 
+                href="https://www.lowtidedigital.ca" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-muted-foreground hover:text-primary transition-colors group"
+              >
+                A product by{" "}
+                <span className="font-medium text-foreground group-hover:text-primary underline underline-offset-2 decoration-primary/50">
+                  Low Tide Digital
+                </span>
+              </a>
+            </div>
           </div>
         </div>
       </footer>
