@@ -99,7 +99,7 @@ export async function listLinksByUser(
   return {
     links: (result.Items || [])
       .map(itemToLink)
-      .filter((link): link is Link => link !== null && !link.deletedAt),
+      .filter((link: Link | null): link is Link => link !== null && !link.deletedAt),
     nextToken: result.LastEvaluatedKey 
       ? Buffer.from(JSON.stringify(result.LastEvaluatedKey)).toString('base64')
       : undefined,
@@ -350,7 +350,7 @@ export async function getClickEvents(
       ScanIndexForward: false,
     }));
 
-    events.push(...(result.Items || []).map(item => ({
+    events.push(...(result.Items || []).map((item: Record<string, any>) => ({
       eventId: item.eventId,
       linkId: item.linkId,
       slug: item.slug,
